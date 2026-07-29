@@ -12,6 +12,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 MCP_DIR = ROOT / "plugin" / "mcp"
 sys.path.insert(0, str(MCP_DIR))
@@ -51,6 +53,41 @@ def test_extract_ipv4():
 def test_no_host_in_plain_command():
     got = hook.extract_targets("Bash", {"command": "ls -la ./notes"})
     assert got == []
+
+
+@pytest.mark.parametrize("cmd", [
+    "cat plugin/mcp/server.py",
+    "python -m pytest tests/test_hook.py -q",
+    "python -c \"import json; json.load(open('x'))\"",
+    "git log --oneline",
+    "cat plugin.json && cat report.py",
+    "grep -rn urllib.parse plugin/mcp",
+    "ls dist/build.js node_modules/.bin",
+])
+def test_filenames_and_code_are_not_hosts(cmd):
+    """The regression that made the tool unusable: routine commands full of
+    dotted tokens (filenames, module refs) must NOT be read as out-of-scope
+    hosts. If any of these extracts a host, a live target would block the command."""
+    assert hook.extract_targets("Bash", {"command": cmd}) == [], cmd
+
+
+def test_bare_domain_needs_network_context():
+    # same token, two contexts: a host after curl vs a filename after cat
+    assert dict(hook.extract_targets("Bash", {"command": "curl evil.com"}))
+    assert hook.extract_targets("Bash", {"command": "cat evil.com"}) == []
+
+
+def test_compound_command_only_flags_the_network_target():
+    got = dict(hook.extract_targets(
+        "Bash", {"command": "curl https://api.acme.com/x && cat notes.txt"}))
+    assert "api.acme.com" in got
+    assert "notes.txt" not in got  # filename after cat, not a network target
+
+
+def test_url_still_extracted_without_network_tool_word():
+    # a raw URL with no recognised tool name still counts (unambiguous)
+    got = dict(hook.extract_targets("Bash", {"command": "xdg-open https://evil.com/p"}))
+    assert "evil.com" in got
 
 
 def test_strips_userinfo_and_port():
@@ -127,6 +164,70 @@ def test_out_of_scope_rule_denies_subdomain():
         out = hook.decide({"tool_name": "Bash",
                            "tool_input": {"command": "curl https://internal.acme.com"}})
         assert out["permissionDecision"] == "deny"
+
+
+def test_burp_send_out_of_scope_denied():
+    """Burp send tools put traffic on the wire; an out-of-scope targetHostname
+    must be blocked, same as a Bash curl."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "mcp__burp__send_http1_request",
+                           "tool_input": {"targetHostname": "evil.com", "targetPort": 443,
+                                          "usesHttps": True, "content": "GET / HTTP/1.1\r\n"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+        assert "evil.com" in out["permissionDecisionReason"]
+
+
+def test_burp_send_in_scope_allowed():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "mcp__burp__send_http1_request",
+                           "tool_input": {"targetHostname": "api.acme.com", "targetPort": 443,
+                                          "usesHttps": True, "content": "GET / HTTP/1.1\r\n"}})
+        assert out is None  # in scope, fresh -> defer
+
+
+def test_burp_send_does_not_scan_request_body():
+    """THE reason we gate on targetHostname only: a request to an IN-scope host
+    that carries an OUT-of-scope URL in its body (a legitimate SSRF test) must
+    NOT be blocked. If this fails, the hook blocks real in-scope testing."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "mcp__burp__send_http1_request",
+                           "tool_input": {
+                               "targetHostname": "api.acme.com", "targetPort": 443,
+                               "usesHttps": True,
+                               "content": "POST /fetch HTTP/1.1\r\nHost: api.acme.com\r\n\r\n"
+                                          "url=http://169.254.169.254/latest/meta-data/"}})
+        assert out is None, "in-scope Burp send with an SSRF payload in the body was wrongly blocked"
+
+
+def test_burp_send_to_intruder_gated():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "mcp__burp__send_to_intruder",
+                           "tool_input": {"targetHostname": "out-of-scope.net", "targetPort": 443,
+                                          "usesHttps": True, "content": "GET / HTTP/1.1\r\n"}})
+        assert out["permissionDecision"] == "deny"
+
+
+def test_burp_read_tools_not_gated():
+    """Reading proxy history is safe and must never be blocked."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        # a read tool carries no targetHostname; even if history mentions other
+        # hosts, reading it generates no traffic and must defer
+        out = hook.decide({"tool_name": "mcp__burp__get_proxy_http_history",
+                           "tool_input": {"count": 50}})
+        assert out is None
+
+
+def test_extract_targets_burp_ignores_body_hosts():
+    got = hook.extract_targets("mcp__burp__send_http1_request", {
+        "targetHostname": "api.acme.com", "targetPort": 443, "usesHttps": True,
+        "content": "GET /x HTTP/1.1\r\nHost: evil.example.org\r\n"})
+    hosts = {h for h, _ in got}
+    assert hosts == {"api.acme.com"}, f"burp extraction must use targetHostname only, got {hosts}"
 
 
 def test_override_allows_once_then_denies():

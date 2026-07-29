@@ -1,12 +1,18 @@
 {
   "name": "bb",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Human-in-the-loop bug bounty research assistant: coverage ledger, scope enforcement, methodology, and grounded reporting. Ingest-only; generates no traffic to targets.",
   "author": { "name": "bug-bounty" },
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
+        ]
+      },
+      {
+        "matcher": "mcp__burp__send_.*",
         "hooks": [
           { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
         ]
