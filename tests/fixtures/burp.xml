@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<items burpVersion="2026.4" exportTime="Mon Jul 20 09:40:20 UTC 2026">
+  <item>
+    <time>Mon Jul 20 09:40:01 UTC 2026</time><url>https://acme.test/login?next=/dash</url><host ip="192.0.2.10">acme.test</host>
+    <port>443</port><protocol>https</protocol><method>GET</method><path>/login</path>
+    <status>200</status><responselength>27</responselength><mimetype>HTML</mimetype>
+    <request base64="true">R0VUIC9sb2dpbj9uZXh0PS9kYXNoIEhUVFAvMS4xDQpIb3N0OiBhY21lLnRlc3QNCg0K</request><response base64="true">SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDI3DQoNCjxodG1sPkxvZ2luIHBhZ2U8L2h0bWw+DQo=</response>
+  </item>
+  <item>
+    <time>Mon Jul 20 09:40:05 UTC 2026</time><url>https://acme.test/search?q=test</url><host ip="192.0.2.10">acme.test</host>
+    <port>443</port><protocol>https</protocol><method>GET</method><path>/search</path>
+    <status>200</status><responselength>24</responselength><mimetype>HTML</mimetype>
+    <request base64="true">R0VUIC9zZWFyY2g/cT10ZXN0IEhUVFAvMS4xDQpIb3N0OiBhY21lLnRlc3QNCg0K</request><response base64="true">SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDI0DQoNCjxodG1sPlJlc3VsdHM8L2h0bWw+DQo=</response>
+  </item>
+  <item>
+    <time>Mon Jul 20 09:40:09 UTC 2026</time><url>https://acme.test/api/login</url><host ip="192.0.2.10">acme.test</host>
+    <port>443</port><protocol>https</protocol><method>POST</method><path>/api/login</path>
+    <status>200</status><responselength>15</responselength><mimetype>JSON</mimetype>
+    <request base64="true">UE9TVCAvYXBpL2xvZ2luIEhUVFAvMS4xDQpIb3N0OiBhY21lLnRlc3QNCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24veC13d3ctZm9ybS11cmxlbmNvZGVkDQpDb250ZW50LUxlbmd0aDogMjkNCg0KdXNlcm5hbWU9dGVzdCZwYXNzd29yZD10ZXN0</request><response base64="true">SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NCkNvbnRlbnQtTGVuZ3RoOiAxNQ0KDQp7Im9rIjogdHJ1ZX0NCg==</response>
+  </item>
+  <item>
+    <time>Mon Jul 20 09:40:13 UTC 2026</time><url>https://acme.test/api/logout</url><host ip="192.0.2.10">acme.test</host>
+    <port>443</port><protocol>https</protocol><method>POST</method><path>/api/logout</path>
+    <status>302</status><responselength>0</responselength><mimetype></mimetype>
+    <request base64="true">UE9TVCAvYXBpL2xvZ291dCBIVFRQLzEuMQ0KSG9zdDogYWNtZS50ZXN0DQpDb250ZW50LUxlbmd0aDogMA0KDQo=</request><response base64="true">SFRUUC8xLjEgMzAyIEZvdW5kDQpMb2NhdGlvbjogL2xvZ2luDQpDb250ZW50LUxlbmd0aDogMA0KDQo=</response>
+  </item>
+</items>

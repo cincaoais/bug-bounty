@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!DOCTYPE items [
+  <!ENTITY a0 "acme">
+  <!ENTITY a1 "&a0;&a0;">
+  <!ENTITY a2 "&a1;&a1;">
+  <!ENTITY a3 "&a2;&a2;">
+  <!ENTITY a4 "&a3;&a3;">
+]>
+<items>&a4;</items>

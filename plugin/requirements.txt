@@ -1,0 +1,5 @@
+# Runtime: exactly one dependency. Everything else is Python stdlib.
+mcp>=1.2
+
+# Dev only (not needed to run the plugin):
+#   pytest

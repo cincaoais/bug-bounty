@@ -1,0 +1,432 @@
+[
+  {
+    "class": "idor-bola",
+    "label": "IDOR / BOLA",
+    "first_signals": [
+      "A URL or JSON body carries an identifier you did not choose — an order number, a document id, a user id — and the value is short, sequential, or otherwise guessable.",
+      "The same resource is reachable by two different routes and only one of them looks access-controlled."
+    ],
+    "looks_ordinary_because": "Every application passes ids around. Nothing about an id in a URL is suspicious on its own — which is exactly why the surface is under-tested.",
+    "what_to_check_next": [
+      "Establish whether the id space is enumerable at all before assuming anything.",
+      "Compare the response for your own resource against one you should not own, using two genuinely separate accounts."
+    ],
+    "why_hunters_walk_past_it": "It requires two accounts and a second session to prove, so it gets deferred and then forgotten.",
+    "confirms_when": "A resource belonging to another account is returned, or modified, with your own credentials.",
+    "not_this": "A 403 that merely differs in body text is not access — it is an information leak at most, and reporting it as IDOR gets the report closed."
+  },
+  {
+    "class": "broken-access-control",
+    "label": "Broken Access Control",
+    "first_signals": [
+      "A page or menu item that only admins should see is absent from the UI for your role, but the URL pattern underneath it is guessable from other parts of the app.",
+      "Client-side JavaScript contains role-gated route definitions or feature flags referencing paths you've never been navigated to.",
+      "The app hides a button or tab based on your role, but nothing about the request itself changes when that role check happens."
+    ],
+    "looks_ordinary_because": "Access control is usually enforced consistently at the UI layer, so hidden buttons and greyed-out menus look like the whole story — testers stop once the interface behaves correctly.",
+    "what_to_check_next": [
+      "Try reaching the hidden functionality's endpoint directly with a lower-privileged session, bypassing the UI that would normally prevent the navigation.",
+      "Check whether the same action is implemented in more than one place — an old admin panel, a legacy API version — with different enforcement.",
+      "Note whether authorization is checked once per session or on every request, using a state-changing action performed right after a role downgrade."
+    ],
+    "why_hunters_walk_past_it": "Confirming it means deliberately acting outside the intended navigation flow, which feels like 'not testing the real app' even though it's exactly how an attacker interacts with it.",
+    "confirms_when": "A privileged action executes or privileged data returns for an account whose role should have blocked it, verified via direct request rather than through the UI.",
+    "not_this": "A UI element that is merely hidden with working server-side enforcement underneath is not broken access control — reporting it without proving a server-side bypass gets it closed."
+  },
+  {
+    "class": "ssrf",
+    "label": "Server-Side Request Forgery",
+    "first_signals": [
+      "A feature fetches a URL you supply — an avatar-from-URL importer, a webhook tester, a link preview, a PDF-from-link generator — and shows you an artifact derived from that fetch.",
+      "Response timing or the error message differs depending on whether the host you gave it fails to resolve, refuses the connection, or returns a redirect.",
+      "The feature is described as 'fetches metadata' or 'validates the link' rather than simply storing the text you typed."
+    ],
+    "looks_ordinary_because": "Fetch-a-URL features are treated as convenience utilities, so validation focuses on file type and size rather than on where the request is actually allowed to go.",
+    "what_to_check_next": [
+      "Note whether the fetcher follows redirects, since a validated URL can hand off to an unvalidated destination after the check already passed.",
+      "Check whether the server distinguishes a URL that fails DNS resolution from one that resolves but refuses the connection — that distinction proves the request left the server.",
+      "Look for any part of the response — a rendered thumbnail, a status field, a timing difference — that leaks information about a destination you don't control."
+    ],
+    "why_hunters_walk_past_it": "It looks like a file-upload or link-preview feature rather than a network primitive, so it doesn't trigger the same instinct as an obvious admin-only 'fetch this URL' tool.",
+    "confirms_when": "The application's own network position is used to reach a destination the user could not otherwise reach directly, and the response reflects something about that destination.",
+    "not_this": "A URL field that only ever gets stored and displayed back, with any fetch happening client-side in the visitor's own browser, is not SSRF — there is no server-side request to forge."
+  },
+  {
+    "class": "business-logic",
+    "label": "Business Logic Flaws",
+    "first_signals": [
+      "A multi-step flow — checkout, onboarding, application review — lets you land on a later step directly, or resubmit an earlier one after later steps already ran.",
+      "A price, quantity, or discount value appears in more than one place — a hidden form field, a query parameter, a recalculated total — and only one of them is authoritative server-side.",
+      "The app trusts a client-reported state field (order status, verification status, tier) to decide what happens next, rather than deriving it from server records."
+    ],
+    "looks_ordinary_because": "Business logic is unique to each application, so no scanner or checklist catches it — the flow looks like intended functionality because it is, just missing an edge case.",
+    "what_to_check_next": [
+      "Replay steps out of the sequence the UI enforces and see whether the backend re-validates preconditions or just trusts you arrived in order.",
+      "Change quantities, coupon combinations, or currency in ways the interface doesn't offer but the underlying parameter would still accept.",
+      "Look for a legitimate action — cancel, refund, downgrade — that could be invoked at a moment the designer didn't anticipate, like mid-fulfillment."
+    ],
+    "why_hunters_walk_past_it": "There is no generic payload to try, so it demands actually understanding what the business is trying to prevent, which takes longer than testing a known vulnerability class.",
+    "confirms_when": "You obtain an outcome the business rules were designed to prevent — free or reduced-cost goods, skipped verification, an invalid state combination — through steps the UI itself allowed.",
+    "not_this": "A workflow that merely feels clunky, or lets you view a step out of order without changing money, access, or state a manual review would call wrong, is a UX complaint, not a logic flaw."
+  },
+  {
+    "class": "authentication-flaws",
+    "label": "Authentication Flaws",
+    "first_signals": [
+      "Login, password-reset, and registration return different error messages, status codes, or response timing depending on whether the account exists.",
+      "A 'remember me' or 'stay logged in' option issues a token that outlives the session cookie by an unusually long margin without re-verifying identity.",
+      "Lockout, CAPTCHA, or rate limiting is present on the login form but absent from a sibling endpoint doing the same check, like a mobile API or SSO fallback."
+    ],
+    "looks_ordinary_because": "Authentication forms get the most security review of any surface, so testers assume the obvious front door is solid and move on to look for 'real' bugs elsewhere.",
+    "what_to_check_next": [
+      "Compare the exact response — body, headers, timing — between a valid username with a wrong password and a username that doesn't exist at all.",
+      "Find every place credentials or tokens are checked — web login, mobile API, password reset, SSO callback — and see whether they all enforce the same limits.",
+      "Check whether a session issued before a password change or logout is still accepted afterward."
+    ],
+    "why_hunters_walk_past_it": "The main login form is the most-tested endpoint on the internet, so hunters assume it's hardened and move to less obvious pages, missing secondary paths that reuse the same weak logic.",
+    "confirms_when": "You can distinguish valid from invalid accounts reliably, or use a credential or session that should have been invalidated, through a repeatable and observable difference.",
+    "not_this": "A slightly worded error message that still reveals nothing machine-distinguishable about account existence is not a user-enumeration finding when the difference isn't reliably exploitable."
+  },
+  {
+    "class": "session-management",
+    "label": "Session Management",
+    "first_signals": [
+      "The session identifier or auth cookie stays exactly the same across login, logout, and password change instead of being reissued.",
+      "The cookie is missing scoping attributes you'd expect for a security-sensitive session — no clear domain restriction, no expiry tied to logout.",
+      "Logging out on one device leaves other active sessions untouched, or the app has no visible session-management view at all."
+    ],
+    "looks_ordinary_because": "Session handling is usually a framework default, so it looks correct by construction — testers assume the framework got it right and never check whether the default was overridden.",
+    "what_to_check_next": [
+      "Capture the session token before and after login, logout, and password change to see whether it actually rotates at each trust boundary.",
+      "Open the same account in two browsers and check whether an action in one — logout, password change — affects the other's session validity.",
+      "Check whether the session token is predictable, or accepted across environments it shouldn't be, such as a staging token working in production."
+    ],
+    "why_hunters_walk_past_it": "Proving it means capturing and comparing tokens across several actions rather than a single request, so it's slower to verify than most findings and gets skipped under time pressure.",
+    "confirms_when": "A session token captured at one point in time continues to authenticate after an event that should have invalidated it — logout, password reset, or a privilege change.",
+    "not_this": "A session that simply expires later than you'd personally prefer, with no reuse-after-invalidation proven, is a hardening suggestion, not a vulnerability report."
+  },
+  {
+    "class": "mass-assignment",
+    "label": "Mass Assignment",
+    "first_signals": [
+      "A 'view profile' or 'get settings' response returns fields you never see in the edit form — role, isVerified, internal flags — suggesting the object is bound wholesale, not field by field.",
+      "The API accepts a JSON body for an update and the UI only ever sends a subset of its keys, leaving the rest of the schema unclear.",
+      "Client-side artifacts — a bundled schema, an OpenAPI spec, a GraphQL introspection result — reveal field names the form never exposes."
+    ],
+    "looks_ordinary_because": "Frameworks that auto-bind request bodies to model objects are chosen specifically to save development time, so the convenience feature causing the bug is one the whole codebase relies on.",
+    "what_to_check_next": [
+      "Compare the full set of field names visible in any read response against the set the update form actually submits, and treat the gap as your candidate list.",
+      "Send an update request that includes one extra field from that candidate list alongside the normal ones, and see whether it's silently accepted.",
+      "Check whether object creation, not just update, accepts the same extra fields, since creation endpoints often bind even more loosely."
+    ],
+    "why_hunters_walk_past_it": "It requires noticing an absence — a field missing from the form — rather than something present and wrong, which is a much easier thing to overlook entirely.",
+    "confirms_when": "Submitting a field the interface never exposes changes a value the interface never intended you to control, such as role, balance, or ownership.",
+    "not_this": "An extra field that gets accepted in the request but demonstrably has no effect on stored data or later behavior is not mass assignment — it's an ignored parameter."
+  },
+  {
+    "class": "graphql-abuse",
+    "label": "GraphQL Abuse",
+    "first_signals": [
+      "The schema exposes mutations or types with no corresponding feature in the UI, discoverable through introspection or a leaked schema file.",
+      "A single query can nest the same relationship many levels deep — user to posts to comments to author to posts again — without the app stopping you.",
+      "Field-level errors come back per-field rather than failing the whole request, letting partial results through even when part of the query wasn't authorized."
+    ],
+    "looks_ordinary_because": "GraphQL's flexibility is the selling point developers wanted, so the same query shape that lets a legitimate client ask for exactly what it needs also lets anyone else ask for what they shouldn't.",
+    "what_to_check_next": [
+      "Diff the full introspected schema against what the client application actually queries, since unused mutations are rarely tested by the team that shipped them.",
+      "Check whether authorization is enforced per resolver or field, or only at the top-level query name, since nested fields often skip the parent's check.",
+      "See whether batching or aliasing lets you repeat the same sensitive lookup many times within a single request."
+    ],
+    "why_hunters_walk_past_it": "REST-trained instincts look for interesting endpoints; a single GraphQL endpoint looks like one surface to test rather than the dozens of resolvers actually behind it.",
+    "confirms_when": "A query reaches a resolver or field that returns data or performs an action your account role should not be authorized for.",
+    "not_this": "Introspection being enabled by itself, with every exposed field and mutation properly authorized underneath, is a hardening note at best, not a vulnerability."
+  },
+  {
+    "class": "race-condition",
+    "label": "Race Condition",
+    "first_signals": [
+      "An action meant to happen exactly once per account — redeem a coupon, claim a bonus, confirm an email — gives you a window, a spinner, a slow network, where nothing visibly blocks a second attempt.",
+      "A balance or counter — wallet funds, inventory stock, vote count — appears to be read and then updated in separate steps, inferred from the response taking noticeably longer than a simple lookup.",
+      "The same account-bound action can be triggered from multiple tabs, devices, or a mobile app and web app simultaneously logged in together."
+    ],
+    "looks_ordinary_because": "Functionally the feature works perfectly under normal single-request use, so nothing about a manual click-through ever reveals the check-then-act gap underneath.",
+    "what_to_check_next": [
+      "Identify every action that reads a value and later writes a changed version of it, since that pattern, not the UI, is what actually creates the window.",
+      "Note how long the action takes end-to-end; slower actions with an internal read-then-write step give more time for overlap.",
+      "Check whether the same limited resource — a discount code, a seat, a unique username — can be approached from two endpoints that might not share a lock."
+    ],
+    "why_hunters_walk_past_it": "It's invisible in a normal browser session — there's nothing to see by clicking around, so it only surfaces if you deliberately think about timing rather than functionality.",
+    "confirms_when": "Sending the same limited-use action multiple times in quick succession produces more successful outcomes than the limit should allow, such as one coupon applied twice.",
+    "not_this": "An action that fails gracefully under rapid repetition, producing one success and clean rejections for the rest, has a working race guard — reporting it without a repeatable overrun gets it closed."
+  },
+  {
+    "class": "xss",
+    "label": "Cross-Site Scripting",
+    "first_signals": [
+      "Text you enter somewhere reappears somewhere else — a display name in a comment feed, a filename in an admin dashboard, a search term in a results page — through a different rendering context.",
+      "The app renders user content into an attribute, a URL, or an HTML comment rather than plain visible text, contexts that get sanitized less consistently in practice.",
+      "A rich-text editor or markdown renderer is involved, since those intentionally allow some HTML through and mistakes cluster right at that boundary."
+    ],
+    "looks_ordinary_because": "Most user input on most pages is properly encoded, so the one rendering path written differently — often an older feature or a third-party widget — blends in with everything that works fine.",
+    "what_to_check_next": [
+      "Trace every place a piece of input you control gets displayed, not just its own page — profile names and filenames often surface in admin or notification views you didn't submit from.",
+      "Check whether the value passes through more than one system — client render, server template, email notification, PDF export — since each has its own encoding rules.",
+      "Note whether special characters you type come back unchanged in the response source, not just unchanged visually, since the browser may silently correct what the server didn't."
+    ],
+    "why_hunters_walk_past_it": "Reflection in the page you typed into is checked reflexively, but reflection somewhere else entirely — another user's view, an export, a log viewer — requires following the data, not the form.",
+    "confirms_when": "Markup or script you supplied executes or renders as HTML in a browser context you did not type it into, confirmed in the actual page source, not just visual appearance.",
+    "not_this": "Special characters appearing unescaped only in a context that never gets rendered as HTML, like a JSON API response consumed by a native app, isn't exploitable XSS on its own."
+  },
+  {
+    "class": "sql-injection",
+    "label": "SQL Injection",
+    "first_signals": [
+      "A single quote in an otherwise legitimate name, like O'Brien, produces a generic error page instead of a validation message.",
+      "Sorting, filtering, or pagination parameters take a value shaped like a column name or a sort direction word, rather than an opaque token.",
+      "Two inputs that should behave identically, like a search box and a filter field, produce differently-shaped errors given the same edge-case character."
+    ],
+    "looks_ordinary_because": "Modern frameworks parameterize queries by default, so the vulnerable field is almost always the exception — a hand-written report, an ORM raw-query escape hatch, a legacy endpoint — indistinguishable from the outside.",
+    "what_to_check_next": [
+      "Note the exact error-behavior difference between well-formed input and input containing a single quote or comment-like character, without assuming what caused it.",
+      "Look for parameters controlling sort order or column selection, since these are often built with string concatenation because parameterization doesn't fit cleanly there.",
+      "Check whether the same backend logic is reachable from more than one endpoint, like a public search versus an internal admin report, with different input handling."
+    ],
+    "why_hunters_walk_past_it": "The class feels 'solved' by modern frameworks, so testers assume any given field is already parameterized and skip the handful of endpoints that predate or bypass those defaults.",
+    "confirms_when": "A change in query syntax reliably and reproducibly alters what data comes back or how long the query takes, in a way only explainable by your input reaching the query structure itself.",
+    "not_this": "A generic 500 error triggered by any malformed input, including plain oversized or non-ASCII text unrelated to query syntax, is an input-validation bug at most, not proof of injection."
+  },
+  {
+    "class": "template-injection",
+    "label": "Server-Side Template Injection",
+    "first_signals": [
+      "A feature generating personalized text — an email template, an invoice, a report title, a welcome banner — lets you influence the template source itself, not just the values inserted into it.",
+      "Arithmetic-looking or expression-looking syntax typed into a name or comment field gets evaluated rather than displayed literally, visible as a computed value instead of your literal text.",
+      "The app advertises customizable templates, themes, or document generation, meaning a template engine is processing user-influenced content by design."
+    ],
+    "looks_ordinary_because": "It hides inside legitimate templating features meant to interpret some syntax, so a tester must notice the difference between input inserted into a template and input becoming part of it.",
+    "what_to_check_next": [
+      "Identify whether your input lands inside the data passed to a template or inside the template string being compiled, which usually depends on where in the feature you're providing it.",
+      "Try harmless expression syntax appropriate to the templating language the stack likely uses and see whether it's evaluated or shown as literal text.",
+      "Check whether customization features — themes, saved report layouts, document generators — let you edit anything beyond simple placeholder values."
+    ],
+    "why_hunters_walk_past_it": "It's rare enough that most testers have no mental trigger for it, and it only shows up in features explicitly built around templating, a small fraction of any app's surface.",
+    "confirms_when": "An expression you supplied is evaluated by the template engine rather than rendered as literal text, shown by the output being a computed result rather than an echo of your input.",
+    "not_this": "Your literal input being safely substituted into a placeholder and displayed as-is, with no evaluation happening, is the template engine working correctly, not a finding."
+  },
+  {
+    "class": "xxe",
+    "label": "XML External Entity Injection",
+    "first_signals": [
+      "The application accepts XML directly — a file upload, a SOAP request, an SVG image, an office-document import — rather than JSON, given away by content type or file extension.",
+      "An uploaded file that happens to be XML-based, such as SVG, DOCX, or XLSX, is parsed server-side to extract metadata, a thumbnail, or embedded text.",
+      "Error messages on malformed XML input are unusually detailed, revealing a full-featured parser rather than a minimal or streaming one."
+    ],
+    "looks_ordinary_because": "File upload and import features are tested for file type and size, not for what the underlying parser is configured to do with declarations inside a file that looks completely legitimate.",
+    "what_to_check_next": [
+      "Identify every place XML-based content is accepted, including formats that don't look like XML on the surface — SVG avatars, DOCX or XLSX imports, RSS parsers, SAML responses.",
+      "Note whether the parser reports detailed errors on malformed structure, suggesting default parser settings rather than a hardened configuration.",
+      "Check whether the same document type can be uploaded through more than one path, like a profile picture versus a bulk import, with different parser configurations."
+    ],
+    "why_hunters_walk_past_it": "XML feels dated next to JSON APIs, so testers assume it isn't in scope for a modern app, even when a legacy SOAP endpoint or a file-import feature is quietly still using it underneath.",
+    "confirms_when": "Server-side processing of your uploaded document reads or reflects content from outside the document itself, such as local file contents or an internal network resource.",
+    "not_this": "An XML parser that rejects malformed documents outright with a generic parse error, never processing the document further, gives nothing to report without evidence entities resolved."
+  },
+  {
+    "class": "csrf",
+    "label": "Cross-Site Request Forgery",
+    "first_signals": [
+      "A state-changing action — change email, transfer funds, delete account — is triggered by a plain form submission or link, and the request looks the same regardless of where it came from.",
+      "No token, nonce, or other per-request value distinguishes the request, since authentication rests purely on a cookie the browser attaches automatically.",
+      "The action works the same over a plain GET request, meaning it could be triggered just by loading an image or a link, not only by submitting a form."
+    ],
+    "looks_ordinary_because": "Most frameworks add CSRF tokens automatically, so ordinary generated forms already look protected — the gaps show up in endpoints added later, hand-written, or built for a mobile client.",
+    "what_to_check_next": [
+      "Check every state-changing request for a token that's actually validated server-side, not just present in the form — some implementations include the field but never check it.",
+      "Note whether the same action is reachable via an endpoint meant for a different client, like a mobile API or webhook receiver, that doesn't carry the same token requirement.",
+      "Check whether the session cookie's SameSite attribute would already block a cross-site request before you even reach the token, which changes what's worth pursuing."
+    ],
+    "why_hunters_walk_past_it": "Framework defaults now handle it so often that testers assume it's solved everywhere, skipping the manual check on the handful of endpoints that bypass the framework's form helpers.",
+    "confirms_when": "A request built and sent from an unrelated origin, carrying only the ambient browser session, still performs the state-changing action successfully.",
+    "not_this": "A missing token on an action that changes nothing sensitive, or on a request requiring a value an attacker's site couldn't know anyway, doesn't meet the bar most programs pay for."
+  },
+  {
+    "class": "open-redirect",
+    "label": "Open Redirect",
+    "first_signals": [
+      "A URL parameter named something like return-to, next, or continue controls where you land after login, logout, or checkout, and its value is a full or partial URL rather than a page id.",
+      "The redirect happens after a legitimate action completes, so the link would look completely trustworthy to someone glancing only at the domain before clicking.",
+      "The parameter accepts values pointing to a different host without the app appearing to compare it against its own domain first."
+    ],
+    "looks_ordinary_because": "Redirect-after-login is such standard, expected behavior that the parameter carrying the destination barely registers as user-controlled input worth scrutinizing.",
+    "what_to_check_next": [
+      "Check whether the destination is validated against an allowlist of internal paths or merely against a superficial pattern that a different-looking URL could still satisfy.",
+      "Note whether the check inspects the full value or only a prefix, since validation logic often only looks at the start of the string.",
+      "Look for the same redirect parameter reused across multiple flows — SSO, logout, unsubscribe links — that might not all apply the same validation."
+    ],
+    "why_hunters_walk_past_it": "On its own it feels low-stakes to the tester, so it often gets noted and never chased into the higher-value flows, like SSO handoff or password reset links, where it actually matters.",
+    "confirms_when": "A crafted link on the application's own trusted domain redirects the browser to an external destination the application does not control.",
+    "not_this": "A redirect to an external destination that requires the destination to already be pre-registered or account-owned by the same user gets closed as working as intended, not a vulnerability."
+  },
+  {
+    "class": "file-upload",
+    "label": "File Upload Vulnerabilities",
+    "first_signals": [
+      "The upload feature validates file type by checking the extension or the declared content-type header rather than by inspecting the actual file contents.",
+      "Uploaded files are stored and later served back from a path you can predict or that's included directly in the upload response.",
+      "The feature accepts a broader set of file types than the visible use case requires, such as an avatar uploader accepting more than image formats."
+    ],
+    "looks_ordinary_because": "Upload forms look finished once they reject the obviously wrong file types in normal use, so the check feels complete without anyone verifying what happens to a file that lies about itself.",
+    "what_to_check_next": [
+      "Compare what the client-side form restricts against what the server actually accepts when the same request is sent without going through that form.",
+      "Check where the uploaded file ends up — same domain, a separate storage domain, a predictable path — since that changes what a stored file can actually do.",
+      "Look at whether uploaded files are ever processed, such as resized or converted, rather than just stored, since processing brings a second parser into play."
+    ],
+    "why_hunters_walk_past_it": "It requires understanding server-side storage and serving behavior rather than just the form's validation rules, a layer most testers can't see without deliberately probing for it.",
+    "confirms_when": "A file whose real content doesn't match its declared or expected type is accepted and then executed, interpreted, or served in a way beyond being treated as inert stored data.",
+    "not_this": "A file accepted despite a mismatched extension but stored and served back as an inert, non-executable download with the correct content-type header is a hygiene issue, not a working exploit."
+  },
+  {
+    "class": "path-traversal",
+    "label": "Path Traversal",
+    "first_signals": [
+      "A parameter takes a filename, template name, or report id used to build a filesystem path server-side, visible when changing it changes which file's content comes back.",
+      "The application exposes a download or view-file feature where the requested resource is one of many similarly-shaped files on disk, rather than a single fixed one.",
+      "Error messages differ depending on whether the requested filename exists on disk versus is disallowed by validation, revealing the value reaches a real filesystem check."
+    ],
+    "looks_ordinary_because": "File-serving parameters look like simple lookups, identical in shape to any other id parameter, so nothing visually suggests they're handed to filesystem APIs rather than a database query.",
+    "what_to_check_next": [
+      "Note whether the filename parameter's value appears to map directly onto real files rather than through an internal lookup table or database record.",
+      "Compare the error behavior for a nonexistent filename versus one blocked by validation logic, since a distinct 'not found' response implies direct filesystem access.",
+      "Check whether the same parameter is used consistently across the app, or whether one occurrence has looser validation than a similar one elsewhere."
+    ],
+    "why_hunters_walk_past_it": "File-serving features are common and usually look boringly identical to each other, so one implementation that skipped a canonicalization check doesn't stand out from the ones that got it right.",
+    "confirms_when": "Manipulating the path segment of the parameter returns content from a file outside the directory the feature was intended to serve from.",
+    "not_this": "A parameter clearly mapped through an internal id-to-file lookup table, where arbitrary path segments simply produce a not-found response, doesn't reach the filesystem directly."
+  },
+  {
+    "class": "jwt-flaws",
+    "label": "JWT Flaws",
+    "first_signals": [
+      "A token you can decode — the header and payload are base64, not encrypted — contains fields that look like they drive authorization decisions, such as role, tenant id, or permission list.",
+      "The token's header specifies which signing algorithm, and sometimes which key or key-lookup mechanism, to use, meaning that metadata is itself attacker-visible input.",
+      "The token has no visible expiry field, or an expiry far longer than the session actually seems to last based on other behavior in the app."
+    ],
+    "looks_ordinary_because": "JWTs look like inert, tamper-evident blobs because they're signed, so the assumption that signed means trustworthy stops people from examining what's inside or how verification actually works.",
+    "what_to_check_next": [
+      "Decode the token's header and payload — no cracking required, it's just base64 — and note which claims look authorization-relevant rather than purely informational.",
+      "Check whether the app exposes any way to see how the signature is verified, like a JWKS endpoint, a key-id header field, or an algorithm field, since verification logic is its own risk.",
+      "Note whether an expired or logged-out token is actually rejected server-side, or only treated as expired by client-side logic."
+    ],
+    "why_hunters_walk_past_it": "The base64 encoding looks like obfuscation at a glance, so people who don't recognize it as trivially reversible skip past the token instead of reading what it actually claims.",
+    "confirms_when": "A token you were able to modify or forge — its claims, its algorithm, or its signature handling — is accepted by the server as valid for a session or identity you should not have.",
+    "not_this": "A JWT with a long expiry or verbose claims that the server nonetheless verifies correctly on every request is a design choice, not a flaw, absent a demonstrated forgery or bypass."
+  },
+  {
+    "class": "oauth-flaws",
+    "label": "OAuth / OIDC Flaws",
+    "first_signals": [
+      "The redirect_uri or return destination in an authorization request is a full URL rather than a fixed value chosen from the app's registered options.",
+      "The state parameter is missing, always the same value, or clearly not tied to your specific session when you inspect the authorization request.",
+      "A 'login with X' button hands off to the identity provider and back so quickly, with so little visible validation, that it's unclear what the callback actually checks."
+    ],
+    "looks_ordinary_because": "OAuth flows are built from a well-known, standardized dance of redirects, so a broken implementation looks exactly like a correct one to anyone not checking each parameter against the spec's intent.",
+    "what_to_check_next": [
+      "Check how strictly the redirect_uri is validated — exact match, prefix match, or just presence of the registered domain somewhere in the string — since looseness here is common.",
+      "Confirm whether the state parameter is generated per-request and actually verified on the callback, not merely present in the URL.",
+      "Note what identity the callback endpoint actually trusts to establish your session — the token from the provider, or a client-influenced value like an email address."
+    ],
+    "why_hunters_walk_past_it": "The spec is long and the flow spans multiple hops across two services, so verifying each check individually feels disproportionate next to a single-request bug in the same app.",
+    "confirms_when": "You can complete the flow, or redirect its result, in a way that establishes a session or reveals a token for an account other than the one that authorized it.",
+    "not_this": "A redirect_uri that must exactly match a pre-registered value, with no bypass found beyond that requirement, is the control working as intended, not a finding."
+  },
+  {
+    "class": "cors-misconfig",
+    "label": "CORS Misconfiguration",
+    "first_signals": [
+      "The Access-Control-Allow-Origin response header reflects whatever Origin you sent, rather than naming a fixed domain.",
+      "That reflected-origin response also carries Access-Control-Allow-Credentials set to true, meaning the browser would send cookies along with a cross-origin request.",
+      "An endpoint returning account-specific or otherwise sensitive data is the one carrying this permissive header, not just a public asset endpoint."
+    ],
+    "looks_ordinary_because": "Reflecting the Origin header is a common working shortcut for supporting multiple legitimate subdomains, so it looks like normal multi-tenant config unless you check what it does for an unrelated domain.",
+    "what_to_check_next": [
+      "Send a request with an arbitrary, unrelated Origin value and check whether it's reflected back rather than rejected.",
+      "Check specifically whether credentialed responses, ones that would include cookies or an auth header, carry the permissive header, since that combination is what actually matters.",
+      "Look for whether the allowed-origin check does simple substring matching against the app's real domain, which a similarly-named but different domain could still satisfy."
+    ],
+    "why_hunters_walk_past_it": "A single header value that isn't obviously wrong-looking, since it just repeats your own Origin back at you, doesn't trigger suspicion the way a wildcard would.",
+    "confirms_when": "A page on a domain you don't control can read the response of a credentialed, cross-origin request to the target application containing sensitive account data.",
+    "not_this": "A wildcard or reflected origin on an endpoint that requires no credentials and returns only public data carries no actual impact, since there's no cross-origin secret being exposed."
+  },
+  {
+    "class": "subdomain-takeover",
+    "label": "Subdomain Takeover",
+    "first_signals": [
+      "A subdomain resolves via a CNAME to a third-party platform — a static site host, a helpdesk tool, a marketing landing-page service — rather than to the company's own infrastructure.",
+      "Visiting that subdomain returns a 'not found' or setup-in-progress page from the third-party platform itself, rather than from the company's own error pages.",
+      "The subdomain shows up in old marketing material, a deprecated product page, or a DNS record that looks stale relative to the rest of the company's active subdomains."
+    ],
+    "looks_ordinary_because": "A dangling CNAME looks completely inert from the outside — the page just shows an error — so it reads as a broken link rather than infrastructure waiting to be claimed by anyone.",
+    "what_to_check_next": [
+      "Confirm the CNAME target service and check whether that service's own error page indicates the name is currently unclaimed and available for registration.",
+      "Note whether the subdomain still receives real user traffic or links from the main site, since that affects both impact and attention after being reported.",
+      "Check for other subdomains pointing at the same class of external service, since one forgotten integration usually isn't the only one."
+    ],
+    "why_hunters_walk_past_it": "Enumerating every subdomain and checking each one's DNS target against its live content is tedious, list-based work that doesn't feel like 'testing' in the way probing an app does.",
+    "confirms_when": "The unclaimed name or resource is registered on the third-party service and content is served from it under the target's own subdomain.",
+    "not_this": "A subdomain pointing to a third-party service that returns a normal error page while remaining unavailable to register, because it's still actively claimed, isn't a takeover, just a broken link."
+  },
+  {
+    "class": "secrets-exposure",
+    "label": "Secrets Exposure",
+    "first_signals": [
+      "A JavaScript bundle, mobile app binary, or public repository contains a string that looks like a key or token — a recognizable prefix, a long random value assigned to a variable named key or secret.",
+      "A source map file is fetchable for a production bundle, turning minified code back into a readable file tree including comments and variable names.",
+      "A response header, error message, or debug endpoint reveals internal hostnames, environment names, or configuration values not meant for the public build."
+    ],
+    "looks_ordinary_because": "Every production app ships some public keys by design, like analytics ids or publishable payment keys, so one that looks like a credential blends into a pile of others meant to be there.",
+    "what_to_check_next": [
+      "Check whether the specific key or token found is scoped to public, low-privilege use by design, or grants access it shouldn't from the client side.",
+      "Look for the same value reused server-side, which would confirm it's a real operational secret rather than a client-safe identifier.",
+      "Check whether source maps, debug builds, or admin bundles are reachable for a production origin, since those carry far more than the minified app does."
+    ],
+    "why_hunters_walk_past_it": "It's not obvious which of the many strings that look like keys are actually dangerous, so people either report all of them indiscriminately or dismiss all of them without checking.",
+    "confirms_when": "The discovered credential is confirmed to authenticate against a real, sensitive system or grant access beyond what a public client is expected to have.",
+    "not_this": "A publishable or public-by-design key, like an analytics id or a domain-restricted map-widget key, being visible in client code is expected and isn't a secret leak."
+  },
+  {
+    "class": "request-smuggling",
+    "label": "HTTP Request Smuggling",
+    "first_signals": [
+      "The application sits behind a visible reverse proxy, load balancer, or CDN, inferred from server headers, TLS termination behavior, or infrastructure-revealing error pages.",
+      "Response behavior is occasionally inconsistent for identical requests sent in quick succession, with a subsequent unrelated request receiving an unexpected or mismatched response.",
+      "The front-end and back-end technologies are identifiably different products, such as different server headers on error pages versus normal ones, hinting their HTTP parsers differ too."
+    ],
+    "looks_ordinary_because": "Almost every production app runs behind a proxy today, so that second parser is treated as invisible plumbing rather than as a second copy of the same job that could disagree with the first.",
+    "what_to_check_next": [
+      "Identify the actual front-end and back-end server software where possible, since publicly known parsing discrepancies exist between specific pairs of technologies.",
+      "Note any occasion where a response appears to belong to a different request than the one you sent, the visible symptom of desynchronization between the two parsers.",
+      "Check whether the front-end and back-end could disagree about where one request ends and the next begins, based on how each reports length or encoding."
+    ],
+    "why_hunters_walk_past_it": "It requires reasoning about two separate systems' parsing behavior at once, and the visible symptoms — an occasional weird response — are easy to dismiss as a flaky network.",
+    "confirms_when": "A request you sent causes a response meant for a different, subsequent request to be delivered to you, or vice versa, showing the two systems disagree about request boundaries.",
+    "not_this": "A single malformed request that simply gets rejected with an error by either the proxy or the backend, without affecting any other request, shows input validation working, not smuggling."
+  },
+  {
+    "class": "cache-poisoning",
+    "label": "Web Cache Poisoning",
+    "first_signals": [
+      "Response headers indicate the page was served from a cache, such as an age header, a cache-hit indicator, or identical content served unusually fast on a repeat request.",
+      "Response content changes based on a header or parameter that doesn't appear to be part of the cache key, visible when a personalizing value still shows someone else's version.",
+      "A page reflects part of the request — a header value, a parameter — directly into its output while also being cacheable, the combination that makes poisoning possible."
+    ],
+    "looks_ordinary_because": "Caching is invisible infrastructure that product teams don't think of as attack surface at all — the page just loads fast, and nobody asks what request shape got cached to make that happen.",
+    "what_to_check_next": [
+      "Compare what actually varies the cached response, checked by watching cache-hit indicators across request variations, against what the app logic reads but the key ignores.",
+      "Check whether an unkeyed input that influences the response is one a normal user's browser sends automatically, since that maximizes how many future visitors receive the poisoned version.",
+      "Note how long content persists once cached, since a longer duration gives any successful poisoning more time to be observed and its impact to grow."
+    ],
+    "why_hunters_walk_past_it": "It requires thinking about two systems' notion of 'the same request' at once — the cache's and the application's — which is unintuitive compared to testing one request in isolation.",
+    "confirms_when": "A response you influenced through an unkeyed input is then served to a subsequent, separate request that did not include your input at all.",
+    "not_this": "A response that reflects your input back to you, on a page that turns out not to be cached at all, is a self-contained reflection issue — without a second request receiving it, it isn't poisoning."
+  }
+]

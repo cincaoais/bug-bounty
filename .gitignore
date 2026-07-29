@@ -1,0 +1,14 @@
+# Never commit case data. It lives in BB_DATA_DIR (default ~/.bb-bounty) OUTSIDE
+# this repo by design, but guard against a misconfigured data dir landing here.
+.bb-bounty/
+**/bb-data/
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/

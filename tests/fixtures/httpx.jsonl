@@ -1,0 +1,6 @@
+{"timestamp": "2026-07-20T09:00:01Z", "url": "https://acme.test/", "input": "acme.test", "host": "acme.test", "status_code": 200, "title": "Acme Test - Home", "tech": ["nginx", "React"], "webserver": "nginx", "content_length": 5321}
+{"timestamp": "2026-07-20T09:00:03Z", "url": "https://api.acme.test/v1/status", "input": "api.acme.test", "host": "api.acme.test", "status_code": 200, "title": "Acme Test API", "tech": ["Express"], "webserver": "nginx", "content_length": 87}
+{"timestamp": "2026-07-20T09:00:05Z", "url": "https://acme.test/admin/", "input": "acme.test", "host": "acme.test", "status_code": 401, "title": "", "tech": [], "webserver": "nginx", "content_length": 0}
+{"timestamp": "2026-07-20T09:00:07Z", "url": "https://acme.test/private/", "input": "acme.test", "host": "acme.test", "status_code": 403, "title": "", "tech": [], "webserver": "nginx", "content_length": 162}
+{"timestamp": "2026-07-20T09:00:09Z", "url": "https://api.acme.test/v1/error", "input": "api.acme.test", "host": "api.acme.test", "status_code": 500, "title": "Server Error", "tech": ["Apache"], "webserver": "Apache", "content_length": 512}
+{"timestamp": "2026-07-20T09:00:11Z", "url": "https://acme.test/old-page", "input": "acme.test", "host": "acme.test", "status_code": 301, "title": "", "tech": [], "webserver": "nginx", "content_length": 0}

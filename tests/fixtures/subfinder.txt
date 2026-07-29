@@ -1,0 +1,8 @@
+acme.test
+www.acme.test
+api.acme.test
+# subfinder v2.6.3
+
+dev.acme.test
+staging.acme.test
+mail.acme.test

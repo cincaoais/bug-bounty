@@ -1,0 +1,11 @@
+{
+  "name": "bug-bounty-local",
+  "owner": { "name": "local" },
+  "plugins": [
+    {
+      "name": "bb",
+      "source": "./plugin",
+      "description": "Human-in-the-loop bug bounty research assistant: scope enforcement, coverage ledger, recon ingest, findings graph, grounded reporting, and 23 methodology playbooks. Ingest-only; sends no traffic to targets."
+    }
+  ]
+}
