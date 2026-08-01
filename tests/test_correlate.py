@@ -73,6 +73,56 @@ def test_add_primitive(cor):
     assert any(p["id"] == pid for p in cor.list_primitives("t"))
 
 
+# ---- Slice 3.2/6.2 finding #13: mission_id cross-linking ----------------------
+
+def test_note_with_mission_id_stored_and_filterable(cor):
+    nid = cor.add_note("t", "leaked stack trace on /rest/admin", mission_id=7)["id"]
+    cor.add_note("t", "unrelated observation, no mission")
+    mission_notes = cor.list_notes("t", mission_id=7)
+    assert [r["id"] for r in mission_notes] == [nid]
+    assert mission_notes[0]["mission_id"] == 7
+
+
+def test_note_without_mission_id_still_works(cor):
+    """Regression: recording without mission_id must be unaffected."""
+    nid = cor.add_note("t", "no mission attached")["id"]
+    row = [r for r in cor.list_notes("t") if r["id"] == nid][0]
+    assert row["mission_id"] is None
+
+
+def test_lead_with_mission_and_objective_id_stored_and_filterable(cor):
+    lid = cor.add_lead("t", "admin section reachable without auth",
+                       mission_id=3, objective_id="juice-shop:adminSectionChallenge")["id"]
+    cor.add_lead("t", "unrelated lead, no mission")
+    mission_leads = cor.list_leads("t", mission_id=3)
+    assert [r["id"] for r in mission_leads] == [lid]
+    assert mission_leads[0]["objective_id"] == "juice-shop:adminSectionChallenge"
+
+
+def test_lead_without_mission_id_still_works(cor):
+    """Regression: recording without mission_id/objective_id must be unaffected."""
+    lid = cor.add_lead("t", "no mission attached")["id"]
+    row = [r for r in cor.list_leads("t") if r["id"] == lid][0]
+    assert row["mission_id"] is None
+    assert row["objective_id"] is None
+
+
+def test_primitive_with_mission_id_stored_and_filterable(cor):
+    pid = cor.add_primitive("t", "can reach /rest/admin without auth",
+                            "confirmed via direct GET", mission_id=9)["id"]
+    cor.add_primitive("t", "unrelated primitive, no mission")
+    mission_primitives = cor.list_primitives("t", mission_id=9)
+    assert [r["id"] for r in mission_primitives] == [pid]
+    assert mission_primitives[0]["mission_id"] == 9
+
+
+def test_primitive_without_mission_id_still_works(cor):
+    """Regression: recording without mission_id must be unaffected."""
+    pid = cor.add_primitive("t", "no mission attached")["id"]
+    row = [r for r in cor.list_primitives("t") if r["id"] == pid][0]
+    assert row["mission_id"] is None
+
+
 def test_lead_status_transitions(cor):
     lid = cor.add_lead("t", "maybe idor")["id"]
     cor.set_lead_status("t", lid, "chasing")

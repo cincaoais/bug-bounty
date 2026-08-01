@@ -1,0 +1,1072 @@
+[
+  {
+    "id": "webgoat:authbypass/VerifyAccount",
+    "app": "webgoat",
+    "native_id": "authbypass/VerifyAccount",
+    "name": "Authentication Bypasses: Verify Account",
+    "category": "Authentication Bypasses",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Authentication Bypasses' lesson (class VerifyAccount, source path lessons/authbypass/VerifyAccount.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:bypassrestrictions/BypassRestrictionsFieldRestrictions",
+    "app": "webgoat",
+    "native_id": "bypassrestrictions/BypassRestrictionsFieldRestrictions",
+    "name": "Bypass Client Side JavaScript Validation: Bypass Restrictions Field Restrictions",
+    "category": "Bypass Client Side JavaScript Validation",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Bypass Client Side JavaScript Validation' lesson (class BypassRestrictionsFieldRestrictions, source path lessons/bypassrestrictions/BypassRestrictionsFieldRestrictions.java).",
+    "wstg_category_hint": "pb-business-logic"
+  },
+  {
+    "id": "webgoat:bypassrestrictions/BypassRestrictionsFrontendValidation",
+    "app": "webgoat",
+    "native_id": "bypassrestrictions/BypassRestrictionsFrontendValidation",
+    "name": "Bypass Client Side JavaScript Validation: Bypass Restrictions Frontend Validation",
+    "category": "Bypass Client Side JavaScript Validation",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Bypass Client Side JavaScript Validation' lesson (class BypassRestrictionsFrontendValidation, source path lessons/bypassrestrictions/BypassRestrictionsFrontendValidation.java).",
+    "wstg_category_hint": "pb-business-logic"
+  },
+  {
+    "id": "webgoat:challenges/challenge1/Assignment1",
+    "app": "webgoat",
+    "native_id": "challenges/challenge1/Assignment1",
+    "name": "WebGoat Challenges: Assignment 1",
+    "category": "WebGoat Challenges",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'WebGoat Challenges' lesson (class Assignment1, source path lessons/challenges/challenge1/Assignment1.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:challenges/challenge5/Assignment5",
+    "app": "webgoat",
+    "native_id": "challenges/challenge5/Assignment5",
+    "name": "WebGoat Challenges: Assignment 5",
+    "category": "WebGoat Challenges",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'WebGoat Challenges' lesson (class Assignment5, source path lessons/challenges/challenge5/Assignment5.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:challenges/challenge7/Assignment7",
+    "app": "webgoat",
+    "native_id": "challenges/challenge7/Assignment7",
+    "name": "WebGoat Challenges: Assignment 7",
+    "category": "WebGoat Challenges",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'WebGoat Challenges' lesson (class Assignment7, source path lessons/challenges/challenge7/Assignment7.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:challenges/challenge8/Assignment8",
+    "app": "webgoat",
+    "native_id": "challenges/challenge8/Assignment8",
+    "name": "WebGoat Challenges: Assignment 8",
+    "category": "WebGoat Challenges",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'WebGoat Challenges' lesson (class Assignment8, source path lessons/challenges/challenge8/Assignment8.java).",
+    "wstg_category_hint": "pb-session-management"
+  },
+  {
+    "id": "webgoat:chromedevtools/NetworkDummy",
+    "app": "webgoat",
+    "native_id": "chromedevtools/NetworkDummy",
+    "name": "Using the Developer Tools: Network Dummy",
+    "category": "Using the Developer Tools",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Using the Developer Tools' lesson (class NetworkDummy, source path lessons/chromedevtools/NetworkDummy.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:chromedevtools/NetworkLesson",
+    "app": "webgoat",
+    "native_id": "chromedevtools/NetworkLesson",
+    "name": "Using the Developer Tools: Network Lesson",
+    "category": "Using the Developer Tools",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Using the Developer Tools' lesson (class NetworkLesson, source path lessons/chromedevtools/NetworkLesson.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:cia/CIAQuiz",
+    "app": "webgoat",
+    "native_id": "cia/CIAQuiz",
+    "name": "General Knowledge (CIA Triad): CIA Quiz",
+    "category": "General Knowledge (CIA Triad)",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'General Knowledge (CIA Triad)' lesson (class CIAQuiz, source path lessons/cia/CIAQuiz.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:clientsidefiltering/ClientSideFilteringAssignment",
+    "app": "webgoat",
+    "native_id": "clientsidefiltering/ClientSideFilteringAssignment",
+    "name": "Client Side Filtering: Client Side Filtering Assignment",
+    "category": "Client Side Filtering",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Client Side Filtering' lesson (class ClientSideFilteringAssignment, source path lessons/clientsidefiltering/ClientSideFilteringAssignment.java).",
+    "wstg_category_hint": "pb-business-logic"
+  },
+  {
+    "id": "webgoat:clientsidefiltering/ClientSideFilteringFreeAssignment",
+    "app": "webgoat",
+    "native_id": "clientsidefiltering/ClientSideFilteringFreeAssignment",
+    "name": "Client Side Filtering: Client Side Filtering Free Assignment",
+    "category": "Client Side Filtering",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Client Side Filtering' lesson (class ClientSideFilteringFreeAssignment, source path lessons/clientsidefiltering/ClientSideFilteringFreeAssignment.java).",
+    "wstg_category_hint": "pb-business-logic"
+  },
+  {
+    "id": "webgoat:cryptography/EncodingAssignment",
+    "app": "webgoat",
+    "native_id": "cryptography/EncodingAssignment",
+    "name": "Cryptography: Encoding Assignment",
+    "category": "Cryptography",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cryptography' lesson (class EncodingAssignment, source path lessons/cryptography/EncodingAssignment.java).",
+    "wstg_category_hint": "WSTG-CRYP-04"
+  },
+  {
+    "id": "webgoat:cryptography/HashingAssignment",
+    "app": "webgoat",
+    "native_id": "cryptography/HashingAssignment",
+    "name": "Cryptography: Hashing Assignment",
+    "category": "Cryptography",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cryptography' lesson (class HashingAssignment, source path lessons/cryptography/HashingAssignment.java).",
+    "wstg_category_hint": "WSTG-CRYP-04"
+  },
+  {
+    "id": "webgoat:cryptography/SecureDefaultsAssignment",
+    "app": "webgoat",
+    "native_id": "cryptography/SecureDefaultsAssignment",
+    "name": "Cryptography: Secure Defaults Assignment",
+    "category": "Cryptography",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cryptography' lesson (class SecureDefaultsAssignment, source path lessons/cryptography/SecureDefaultsAssignment.java).",
+    "wstg_category_hint": "WSTG-CRYP-04"
+  },
+  {
+    "id": "webgoat:cryptography/SigningAssignment",
+    "app": "webgoat",
+    "native_id": "cryptography/SigningAssignment",
+    "name": "Cryptography: Signing Assignment",
+    "category": "Cryptography",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cryptography' lesson (class SigningAssignment, source path lessons/cryptography/SigningAssignment.java).",
+    "wstg_category_hint": "WSTG-CRYP-04"
+  },
+  {
+    "id": "webgoat:cryptography/XOREncodingAssignment",
+    "app": "webgoat",
+    "native_id": "cryptography/XOREncodingAssignment",
+    "name": "Cryptography: XOR Encoding Assignment",
+    "category": "Cryptography",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cryptography' lesson (class XOREncodingAssignment, source path lessons/cryptography/XOREncodingAssignment.java).",
+    "wstg_category_hint": "WSTG-CRYP-04"
+  },
+  {
+    "id": "webgoat:csrf/CSRFConfirmFlag1",
+    "app": "webgoat",
+    "native_id": "csrf/CSRFConfirmFlag1",
+    "name": "Cross-Site Request Forgery (CSRF): CSRF Confirm Flag 1",
+    "category": "Cross-Site Request Forgery (CSRF)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Request Forgery (CSRF)' lesson (class CSRFConfirmFlag1, source path lessons/csrf/CSRFConfirmFlag1.java).",
+    "wstg_category_hint": "pb-csrf"
+  },
+  {
+    "id": "webgoat:csrf/CSRFFeedback",
+    "app": "webgoat",
+    "native_id": "csrf/CSRFFeedback",
+    "name": "Cross-Site Request Forgery (CSRF): CSRF Feedback",
+    "category": "Cross-Site Request Forgery (CSRF)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Request Forgery (CSRF)' lesson (class CSRFFeedback, source path lessons/csrf/CSRFFeedback.java).",
+    "wstg_category_hint": "pb-csrf"
+  },
+  {
+    "id": "webgoat:csrf/CSRFLogin",
+    "app": "webgoat",
+    "native_id": "csrf/CSRFLogin",
+    "name": "Cross-Site Request Forgery (CSRF): CSRF Login",
+    "category": "Cross-Site Request Forgery (CSRF)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Request Forgery (CSRF)' lesson (class CSRFLogin, source path lessons/csrf/CSRFLogin.java).",
+    "wstg_category_hint": "pb-csrf"
+  },
+  {
+    "id": "webgoat:csrf/ForgedReviews",
+    "app": "webgoat",
+    "native_id": "csrf/ForgedReviews",
+    "name": "Cross-Site Request Forgery (CSRF): Forged Reviews",
+    "category": "Cross-Site Request Forgery (CSRF)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Request Forgery (CSRF)' lesson (class ForgedReviews, source path lessons/csrf/ForgedReviews.java).",
+    "wstg_category_hint": "pb-csrf"
+  },
+  {
+    "id": "webgoat:deserialization/InsecureDeserializationTask",
+    "app": "webgoat",
+    "native_id": "deserialization/InsecureDeserializationTask",
+    "name": "Insecure Deserialization: Insecure Deserialization Task",
+    "category": "Insecure Deserialization",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'Insecure Deserialization' lesson (class InsecureDeserializationTask, source path lessons/deserialization/InsecureDeserializationTask.java).",
+    "wstg_category_hint": "pb-injection"
+  },
+  {
+    "id": "webgoat:hijacksession/HijackSessionAssignment",
+    "app": "webgoat",
+    "native_id": "hijacksession/HijackSessionAssignment",
+    "name": "Hijack a Session: Hijack Session Assignment",
+    "category": "Hijack a Session",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'Hijack a Session' lesson (class HijackSessionAssignment, source path lessons/hijacksession/HijackSessionAssignment.java).",
+    "wstg_category_hint": "pb-session-management"
+  },
+  {
+    "id": "webgoat:htmltampering/HtmlTamperingTask",
+    "app": "webgoat",
+    "native_id": "htmltampering/HtmlTamperingTask",
+    "name": "HTML Tampering: HTML Tampering Task",
+    "category": "HTML Tampering",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'HTML Tampering' lesson (class HtmlTamperingTask, source path lessons/htmltampering/HtmlTamperingTask.java).",
+    "wstg_category_hint": "pb-business-logic"
+  },
+  {
+    "id": "webgoat:httpbasics/HttpBasicsExternal",
+    "app": "webgoat",
+    "native_id": "httpbasics/HttpBasicsExternal",
+    "name": "HTTP Basics: Http Basics External",
+    "category": "HTTP Basics",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'HTTP Basics' lesson (class HttpBasicsExternal, source path lessons/httpbasics/HttpBasicsExternal.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:httpbasics/HttpBasicsForm",
+    "app": "webgoat",
+    "native_id": "httpbasics/HttpBasicsForm",
+    "name": "HTTP Basics: Http Basics Form",
+    "category": "HTTP Basics",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'HTTP Basics' lesson (class HttpBasicsForm, source path lessons/httpbasics/HttpBasicsForm.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:httpbasics/HttpBasicsLesson",
+    "app": "webgoat",
+    "native_id": "httpbasics/HttpBasicsLesson",
+    "name": "HTTP Basics: Http Basics Lesson",
+    "category": "HTTP Basics",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'HTTP Basics' lesson (class HttpBasicsLesson, source path lessons/httpbasics/HttpBasicsLesson.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:httpbasics/HttpBasicsQuiz",
+    "app": "webgoat",
+    "native_id": "httpbasics/HttpBasicsQuiz",
+    "name": "HTTP Basics: Http Basics Quiz",
+    "category": "HTTP Basics",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'HTTP Basics' lesson (class HttpBasicsQuiz, source path lessons/httpbasics/HttpBasicsQuiz.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:httpproxies/HttpBasicsInterceptRequest",
+    "app": "webgoat",
+    "native_id": "httpproxies/HttpBasicsInterceptRequest",
+    "name": "HTTP Proxies: Http Basics Intercept Request",
+    "category": "HTTP Proxies",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'HTTP Proxies' lesson (class HttpBasicsInterceptRequest, source path lessons/httpproxies/HttpBasicsInterceptRequest.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:idor/IDORDiffAttributes",
+    "app": "webgoat",
+    "native_id": "idor/IDORDiffAttributes",
+    "name": "Insecure Direct Object References: IDOR Diff Attributes",
+    "category": "Insecure Direct Object References",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Insecure Direct Object References' lesson (class IDORDiffAttributes, source path lessons/idor/IDORDiffAttributes.java).",
+    "wstg_category_hint": "pb-idor-bola"
+  },
+  {
+    "id": "webgoat:idor/IDOREditOtherProfile",
+    "app": "webgoat",
+    "native_id": "idor/IDOREditOtherProfile",
+    "name": "Insecure Direct Object References: IDOR Edit Other Profile",
+    "category": "Insecure Direct Object References",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Insecure Direct Object References' lesson (class IDOREditOtherProfile, source path lessons/idor/IDOREditOtherProfile.java).",
+    "wstg_category_hint": "pb-idor-bola"
+  },
+  {
+    "id": "webgoat:idor/IDORLogin",
+    "app": "webgoat",
+    "native_id": "idor/IDORLogin",
+    "name": "Insecure Direct Object References: IDOR Login",
+    "category": "Insecure Direct Object References",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Insecure Direct Object References' lesson (class IDORLogin, source path lessons/idor/IDORLogin.java).",
+    "wstg_category_hint": "pb-idor-bola"
+  },
+  {
+    "id": "webgoat:idor/IDORViewOtherProfile",
+    "app": "webgoat",
+    "native_id": "idor/IDORViewOtherProfile",
+    "name": "Insecure Direct Object References: IDOR View Other Profile",
+    "category": "Insecure Direct Object References",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Insecure Direct Object References' lesson (class IDORViewOtherProfile, source path lessons/idor/IDORViewOtherProfile.java).",
+    "wstg_category_hint": "pb-idor-bola"
+  },
+  {
+    "id": "webgoat:idor/IDORViewOwnProfileAltUrl",
+    "app": "webgoat",
+    "native_id": "idor/IDORViewOwnProfileAltUrl",
+    "name": "Insecure Direct Object References: IDOR View Own Profile Alt Url",
+    "category": "Insecure Direct Object References",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Insecure Direct Object References' lesson (class IDORViewOwnProfileAltUrl, source path lessons/idor/IDORViewOwnProfileAltUrl.java).",
+    "wstg_category_hint": "pb-idor-bola"
+  },
+  {
+    "id": "webgoat:insecurelogin/InsecureLoginTask",
+    "app": "webgoat",
+    "native_id": "insecurelogin/InsecureLoginTask",
+    "name": "Insecure Login: Insecure Login Task",
+    "category": "Insecure Login",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Insecure Login' lesson (class InsecureLoginTask, source path lessons/insecurelogin/InsecureLoginTask.java).",
+    "wstg_category_hint": "WSTG-ATHN-01"
+  },
+  {
+    "id": "webgoat:jwt/JWTDecodeEndpoint",
+    "app": "webgoat",
+    "native_id": "jwt/JWTDecodeEndpoint",
+    "name": "JSON Web Tokens (JWT): JWT Decode Endpoint",
+    "category": "JSON Web Tokens (JWT)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'JSON Web Tokens (JWT)' lesson (class JWTDecodeEndpoint, source path lessons/jwt/JWTDecodeEndpoint.java).",
+    "wstg_category_hint": "pb-jwt-flaws"
+  },
+  {
+    "id": "webgoat:jwt/JWTQuiz",
+    "app": "webgoat",
+    "native_id": "jwt/JWTQuiz",
+    "name": "JSON Web Tokens (JWT): JWT Quiz",
+    "category": "JSON Web Tokens (JWT)",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'JSON Web Tokens (JWT)' lesson (class JWTQuiz, source path lessons/jwt/JWTQuiz.java).",
+    "wstg_category_hint": "pb-jwt-flaws"
+  },
+  {
+    "id": "webgoat:jwt/JWTRefreshEndpoint",
+    "app": "webgoat",
+    "native_id": "jwt/JWTRefreshEndpoint",
+    "name": "JSON Web Tokens (JWT): JWT Refresh Endpoint",
+    "category": "JSON Web Tokens (JWT)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'JSON Web Tokens (JWT)' lesson (class JWTRefreshEndpoint, source path lessons/jwt/JWTRefreshEndpoint.java).",
+    "wstg_category_hint": "pb-jwt-flaws"
+  },
+  {
+    "id": "webgoat:jwt/JWTSecretKeyEndpoint",
+    "app": "webgoat",
+    "native_id": "jwt/JWTSecretKeyEndpoint",
+    "name": "JSON Web Tokens (JWT): JWT Secret Key Endpoint",
+    "category": "JSON Web Tokens (JWT)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'JSON Web Tokens (JWT)' lesson (class JWTSecretKeyEndpoint, source path lessons/jwt/JWTSecretKeyEndpoint.java).",
+    "wstg_category_hint": "pb-jwt-flaws"
+  },
+  {
+    "id": "webgoat:jwt/JWTVotesEndpoint",
+    "app": "webgoat",
+    "native_id": "jwt/JWTVotesEndpoint",
+    "name": "JSON Web Tokens (JWT): JWT Votes Endpoint",
+    "category": "JSON Web Tokens (JWT)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'JSON Web Tokens (JWT)' lesson (class JWTVotesEndpoint, source path lessons/jwt/JWTVotesEndpoint.java).",
+    "wstg_category_hint": "pb-jwt-flaws"
+  },
+  {
+    "id": "webgoat:jwt/claimmisuse/JWTHeaderJKUEndpoint",
+    "app": "webgoat",
+    "native_id": "jwt/claimmisuse/JWTHeaderJKUEndpoint",
+    "name": "JSON Web Tokens (JWT): JWT Header JKU Endpoint",
+    "category": "JSON Web Tokens (JWT)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'JSON Web Tokens (JWT)' lesson (class JWTHeaderJKUEndpoint, source path lessons/jwt/claimmisuse/JWTHeaderJKUEndpoint.java).",
+    "wstg_category_hint": "pb-jwt-flaws"
+  },
+  {
+    "id": "webgoat:jwt/claimmisuse/JWTHeaderKIDEndpoint",
+    "app": "webgoat",
+    "native_id": "jwt/claimmisuse/JWTHeaderKIDEndpoint",
+    "name": "JSON Web Tokens (JWT): JWT Header KID Endpoint",
+    "category": "JSON Web Tokens (JWT)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'JSON Web Tokens (JWT)' lesson (class JWTHeaderKIDEndpoint, source path lessons/jwt/claimmisuse/JWTHeaderKIDEndpoint.java).",
+    "wstg_category_hint": "pb-jwt-flaws"
+  },
+  {
+    "id": "webgoat:logging/LogBleedingTask",
+    "app": "webgoat",
+    "native_id": "logging/LogBleedingTask",
+    "name": "Logging: Log Bleeding Task",
+    "category": "Logging",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Logging' lesson (class LogBleedingTask, source path lessons/logging/LogBleedingTask.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:logging/LogSpoofingTask",
+    "app": "webgoat",
+    "native_id": "logging/LogSpoofingTask",
+    "name": "Logging: Log Spoofing Task",
+    "category": "Logging",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Logging' lesson (class LogSpoofingTask, source path lessons/logging/LogSpoofingTask.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:missingac/MissingFunctionACHiddenMenus",
+    "app": "webgoat",
+    "native_id": "missingac/MissingFunctionACHiddenMenus",
+    "name": "Missing Function Level Access Control: Missing Function AC Hidden Menus",
+    "category": "Missing Function Level Access Control",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Missing Function Level Access Control' lesson (class MissingFunctionACHiddenMenus, source path lessons/missingac/MissingFunctionACHiddenMenus.java).",
+    "wstg_category_hint": "pb-broken-access-control"
+  },
+  {
+    "id": "webgoat:missingac/MissingFunctionACYourHash",
+    "app": "webgoat",
+    "native_id": "missingac/MissingFunctionACYourHash",
+    "name": "Missing Function Level Access Control: Missing Function AC Your Hash",
+    "category": "Missing Function Level Access Control",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Missing Function Level Access Control' lesson (class MissingFunctionACYourHash, source path lessons/missingac/MissingFunctionACYourHash.java).",
+    "wstg_category_hint": "pb-broken-access-control"
+  },
+  {
+    "id": "webgoat:missingac/MissingFunctionACYourHashAdmin",
+    "app": "webgoat",
+    "native_id": "missingac/MissingFunctionACYourHashAdmin",
+    "name": "Missing Function Level Access Control: Missing Function AC Your Hash Admin",
+    "category": "Missing Function Level Access Control",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Missing Function Level Access Control' lesson (class MissingFunctionACYourHashAdmin, source path lessons/missingac/MissingFunctionACYourHashAdmin.java).",
+    "wstg_category_hint": "pb-broken-access-control"
+  },
+  {
+    "id": "webgoat:openredirect/OpenRedirectMitigationCheck",
+    "app": "webgoat",
+    "native_id": "openredirect/OpenRedirectMitigationCheck",
+    "name": "Open Redirect: Open Redirect Mitigation Check",
+    "category": "Open Redirect",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Open Redirect' lesson (class OpenRedirectMitigationCheck, source path lessons/openredirect/OpenRedirectMitigationCheck.java).",
+    "wstg_category_hint": "pb-open-redirect"
+  },
+  {
+    "id": "webgoat:openredirect/OpenRedirectQuiz",
+    "app": "webgoat",
+    "native_id": "openredirect/OpenRedirectQuiz",
+    "name": "Open Redirect: Open Redirect Quiz",
+    "category": "Open Redirect",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Open Redirect' lesson (class OpenRedirectQuiz, source path lessons/openredirect/OpenRedirectQuiz.java).",
+    "wstg_category_hint": "pb-open-redirect"
+  },
+  {
+    "id": "webgoat:openredirect/OpenRedirectTask1",
+    "app": "webgoat",
+    "native_id": "openredirect/OpenRedirectTask1",
+    "name": "Open Redirect: Open Redirect Task 1",
+    "category": "Open Redirect",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Open Redirect' lesson (class OpenRedirectTask1, source path lessons/openredirect/OpenRedirectTask1.java).",
+    "wstg_category_hint": "pb-open-redirect"
+  },
+  {
+    "id": "webgoat:openredirect/OpenRedirectTask2",
+    "app": "webgoat",
+    "native_id": "openredirect/OpenRedirectTask2",
+    "name": "Open Redirect: Open Redirect Task 2",
+    "category": "Open Redirect",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Open Redirect' lesson (class OpenRedirectTask2, source path lessons/openredirect/OpenRedirectTask2.java).",
+    "wstg_category_hint": "pb-open-redirect"
+  },
+  {
+    "id": "webgoat:openredirect/OpenRedirectTask3",
+    "app": "webgoat",
+    "native_id": "openredirect/OpenRedirectTask3",
+    "name": "Open Redirect: Open Redirect Task 3",
+    "category": "Open Redirect",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Open Redirect' lesson (class OpenRedirectTask3, source path lessons/openredirect/OpenRedirectTask3.java).",
+    "wstg_category_hint": "pb-open-redirect"
+  },
+  {
+    "id": "webgoat:openredirect/OpenRedirectTask4",
+    "app": "webgoat",
+    "native_id": "openredirect/OpenRedirectTask4",
+    "name": "Open Redirect: Open Redirect Task 4",
+    "category": "Open Redirect",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Open Redirect' lesson (class OpenRedirectTask4, source path lessons/openredirect/OpenRedirectTask4.java).",
+    "wstg_category_hint": "pb-open-redirect"
+  },
+  {
+    "id": "webgoat:passwordreset/QuestionsAssignment",
+    "app": "webgoat",
+    "native_id": "passwordreset/QuestionsAssignment",
+    "name": "Password Reset: Questions Assignment",
+    "category": "Password Reset",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Password Reset' lesson (class QuestionsAssignment, source path lessons/passwordreset/QuestionsAssignment.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:passwordreset/ResetLinkAssignment",
+    "app": "webgoat",
+    "native_id": "passwordreset/ResetLinkAssignment",
+    "name": "Password Reset: Reset Link Assignment",
+    "category": "Password Reset",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Password Reset' lesson (class ResetLinkAssignment, source path lessons/passwordreset/ResetLinkAssignment.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:passwordreset/ResetLinkAssignmentForgotPassword",
+    "app": "webgoat",
+    "native_id": "passwordreset/ResetLinkAssignmentForgotPassword",
+    "name": "Password Reset: Reset Link Assignment Forgot Password",
+    "category": "Password Reset",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Password Reset' lesson (class ResetLinkAssignmentForgotPassword, source path lessons/passwordreset/ResetLinkAssignmentForgotPassword.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:passwordreset/SecurityQuestionAssignment",
+    "app": "webgoat",
+    "native_id": "passwordreset/SecurityQuestionAssignment",
+    "name": "Password Reset: Security Question Assignment",
+    "category": "Password Reset",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Password Reset' lesson (class SecurityQuestionAssignment, source path lessons/passwordreset/SecurityQuestionAssignment.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:passwordreset/SimpleMailAssignment",
+    "app": "webgoat",
+    "native_id": "passwordreset/SimpleMailAssignment",
+    "name": "Password Reset: Simple Mail Assignment",
+    "category": "Password Reset",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Password Reset' lesson (class SimpleMailAssignment, source path lessons/passwordreset/SimpleMailAssignment.java).",
+    "wstg_category_hint": "pb-authentication-flaws"
+  },
+  {
+    "id": "webgoat:pathtraversal/ProfileUpload",
+    "app": "webgoat",
+    "native_id": "pathtraversal/ProfileUpload",
+    "name": "Path Traversal: Profile Upload",
+    "category": "Path Traversal",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Path Traversal' lesson (class ProfileUpload, source path lessons/pathtraversal/ProfileUpload.java).",
+    "wstg_category_hint": "pb-path-traversal"
+  },
+  {
+    "id": "webgoat:pathtraversal/ProfileUploadBase",
+    "app": "webgoat",
+    "native_id": "pathtraversal/ProfileUploadBase",
+    "name": "Path Traversal: Profile Upload Base",
+    "category": "Path Traversal",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Path Traversal' lesson (class ProfileUploadBase, source path lessons/pathtraversal/ProfileUploadBase.java).",
+    "wstg_category_hint": "pb-path-traversal"
+  },
+  {
+    "id": "webgoat:pathtraversal/ProfileUploadFix",
+    "app": "webgoat",
+    "native_id": "pathtraversal/ProfileUploadFix",
+    "name": "Path Traversal: Profile Upload Fix",
+    "category": "Path Traversal",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Path Traversal' lesson (class ProfileUploadFix, source path lessons/pathtraversal/ProfileUploadFix.java).",
+    "wstg_category_hint": "pb-path-traversal"
+  },
+  {
+    "id": "webgoat:pathtraversal/ProfileUploadRemoveUserInput",
+    "app": "webgoat",
+    "native_id": "pathtraversal/ProfileUploadRemoveUserInput",
+    "name": "Path Traversal: Profile Upload Remove User Input",
+    "category": "Path Traversal",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Path Traversal' lesson (class ProfileUploadRemoveUserInput, source path lessons/pathtraversal/ProfileUploadRemoveUserInput.java).",
+    "wstg_category_hint": "pb-path-traversal"
+  },
+  {
+    "id": "webgoat:pathtraversal/ProfileUploadRetrieval",
+    "app": "webgoat",
+    "native_id": "pathtraversal/ProfileUploadRetrieval",
+    "name": "Path Traversal: Profile Upload Retrieval",
+    "category": "Path Traversal",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Path Traversal' lesson (class ProfileUploadRetrieval, source path lessons/pathtraversal/ProfileUploadRetrieval.java).",
+    "wstg_category_hint": "pb-path-traversal"
+  },
+  {
+    "id": "webgoat:pathtraversal/ProfileZipSlip",
+    "app": "webgoat",
+    "native_id": "pathtraversal/ProfileZipSlip",
+    "name": "Path Traversal: Profile Zip Slip",
+    "category": "Path Traversal",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Path Traversal' lesson (class ProfileZipSlip, source path lessons/pathtraversal/ProfileZipSlip.java).",
+    "wstg_category_hint": "pb-path-traversal"
+  },
+  {
+    "id": "webgoat:securepasswords/SecurePasswordsAssignment",
+    "app": "webgoat",
+    "native_id": "securepasswords/SecurePasswordsAssignment",
+    "name": "Insecure/Secure Passwords: Secure Passwords Assignment",
+    "category": "Insecure/Secure Passwords",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Insecure/Secure Passwords' lesson (class SecurePasswordsAssignment, source path lessons/securepasswords/SecurePasswordsAssignment.java).",
+    "wstg_category_hint": "WSTG-ATHN-07"
+  },
+  {
+    "id": "webgoat:securitymisconfiguration/ActuatorExposureTask",
+    "app": "webgoat",
+    "native_id": "securitymisconfiguration/ActuatorExposureTask",
+    "name": "Security Misconfiguration: Actuator Exposure Task",
+    "category": "Security Misconfiguration",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Security Misconfiguration' lesson (class ActuatorExposureTask, source path lessons/securitymisconfiguration/ActuatorExposureTask.java).",
+    "wstg_category_hint": "pb-secrets-exposure"
+  },
+  {
+    "id": "webgoat:securitymisconfiguration/ConfigHardeningTask",
+    "app": "webgoat",
+    "native_id": "securitymisconfiguration/ConfigHardeningTask",
+    "name": "Security Misconfiguration: Config Hardening Task",
+    "category": "Security Misconfiguration",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Security Misconfiguration' lesson (class ConfigHardeningTask, source path lessons/securitymisconfiguration/ConfigHardeningTask.java).",
+    "wstg_category_hint": "WSTG-CONF-02"
+  },
+  {
+    "id": "webgoat:securitymisconfiguration/DefaultCredentialsTask",
+    "app": "webgoat",
+    "native_id": "securitymisconfiguration/DefaultCredentialsTask",
+    "name": "Security Misconfiguration: Default Credentials Task",
+    "category": "Security Misconfiguration",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Security Misconfiguration' lesson (class DefaultCredentialsTask, source path lessons/securitymisconfiguration/DefaultCredentialsTask.java).",
+    "wstg_category_hint": "WSTG-ATHN-02"
+  },
+  {
+    "id": "webgoat:securitymisconfiguration/VerboseErrorTask",
+    "app": "webgoat",
+    "native_id": "securitymisconfiguration/VerboseErrorTask",
+    "name": "Security Misconfiguration: Verbose Error Task",
+    "category": "Security Misconfiguration",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Security Misconfiguration' lesson (class VerboseErrorTask, source path lessons/securitymisconfiguration/VerboseErrorTask.java).",
+    "wstg_category_hint": "WSTG-ERRH-01"
+  },
+  {
+    "id": "webgoat:spoofcookie/SpoofCookieAssignment",
+    "app": "webgoat",
+    "native_id": "spoofcookie/SpoofCookieAssignment",
+    "name": "Spoof an Authentication Cookie: Spoof Cookie Assignment",
+    "category": "Spoof an Authentication Cookie",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Spoof an Authentication Cookie' lesson (class SpoofCookieAssignment, source path lessons/spoofcookie/SpoofCookieAssignment.java).",
+    "wstg_category_hint": "pb-session-management"
+  },
+  {
+    "id": "webgoat:sqlinjection/advanced/SqlInjectionChallenge",
+    "app": "webgoat",
+    "native_id": "sqlinjection/advanced/SqlInjectionChallenge",
+    "name": "SQL Injection: SQL Injection Challenge",
+    "category": "SQL Injection",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionChallenge, source path lessons/sqlinjection/advanced/SqlInjectionChallenge.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/advanced/SqlInjectionChallengeLogin",
+    "app": "webgoat",
+    "native_id": "sqlinjection/advanced/SqlInjectionChallengeLogin",
+    "name": "SQL Injection: SQL Injection Challenge Login",
+    "category": "SQL Injection",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionChallengeLogin, source path lessons/sqlinjection/advanced/SqlInjectionChallengeLogin.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/advanced/SqlInjectionLesson6a",
+    "app": "webgoat",
+    "native_id": "sqlinjection/advanced/SqlInjectionLesson6a",
+    "name": "SQL Injection: SQL Injection Lesson 6a",
+    "category": "SQL Injection",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson6a, source path lessons/sqlinjection/advanced/SqlInjectionLesson6a.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/advanced/SqlInjectionLesson6b",
+    "app": "webgoat",
+    "native_id": "sqlinjection/advanced/SqlInjectionLesson6b",
+    "name": "SQL Injection: SQL Injection Lesson 6b",
+    "category": "SQL Injection",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson6b, source path lessons/sqlinjection/advanced/SqlInjectionLesson6b.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/advanced/SqlInjectionQuiz",
+    "app": "webgoat",
+    "native_id": "sqlinjection/advanced/SqlInjectionQuiz",
+    "name": "SQL Injection: SQL Injection Quiz",
+    "category": "SQL Injection",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionQuiz, source path lessons/sqlinjection/advanced/SqlInjectionQuiz.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson10",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson10",
+    "name": "SQL Injection: SQL Injection Lesson 10",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson10, source path lessons/sqlinjection/introduction/SqlInjectionLesson10.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson2",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson2",
+    "name": "SQL Injection: SQL Injection Lesson 2",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson2, source path lessons/sqlinjection/introduction/SqlInjectionLesson2.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson3",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson3",
+    "name": "SQL Injection: SQL Injection Lesson 3",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson3, source path lessons/sqlinjection/introduction/SqlInjectionLesson3.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson4",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson4",
+    "name": "SQL Injection: SQL Injection Lesson 4",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson4, source path lessons/sqlinjection/introduction/SqlInjectionLesson4.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson5",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson5",
+    "name": "SQL Injection: SQL Injection Lesson 5",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson5, source path lessons/sqlinjection/introduction/SqlInjectionLesson5.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson5a",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson5a",
+    "name": "SQL Injection: SQL Injection Lesson 5a",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson5a, source path lessons/sqlinjection/introduction/SqlInjectionLesson5a.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson5b",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson5b",
+    "name": "SQL Injection: SQL Injection Lesson 5b",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson5b, source path lessons/sqlinjection/introduction/SqlInjectionLesson5b.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson8",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson8",
+    "name": "SQL Injection: SQL Injection Lesson 8",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson8, source path lessons/sqlinjection/introduction/SqlInjectionLesson8.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/introduction/SqlInjectionLesson9",
+    "app": "webgoat",
+    "native_id": "sqlinjection/introduction/SqlInjectionLesson9",
+    "name": "SQL Injection: SQL Injection Lesson 9",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson9, source path lessons/sqlinjection/introduction/SqlInjectionLesson9.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/mitigation/SqlInjectionLesson10a",
+    "app": "webgoat",
+    "native_id": "sqlinjection/mitigation/SqlInjectionLesson10a",
+    "name": "SQL Injection: SQL Injection Lesson 10a",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson10a, source path lessons/sqlinjection/mitigation/SqlInjectionLesson10a.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/mitigation/SqlInjectionLesson10b",
+    "app": "webgoat",
+    "native_id": "sqlinjection/mitigation/SqlInjectionLesson10b",
+    "name": "SQL Injection: SQL Injection Lesson 10b",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson10b, source path lessons/sqlinjection/mitigation/SqlInjectionLesson10b.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/mitigation/SqlInjectionLesson13",
+    "app": "webgoat",
+    "native_id": "sqlinjection/mitigation/SqlInjectionLesson13",
+    "name": "SQL Injection: SQL Injection Lesson 13",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlInjectionLesson13, source path lessons/sqlinjection/mitigation/SqlInjectionLesson13.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/mitigation/SqlOnlyInputValidation",
+    "app": "webgoat",
+    "native_id": "sqlinjection/mitigation/SqlOnlyInputValidation",
+    "name": "SQL Injection: SQL Only Input Validation",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlOnlyInputValidation, source path lessons/sqlinjection/mitigation/SqlOnlyInputValidation.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:sqlinjection/mitigation/SqlOnlyInputValidationOnKeywords",
+    "app": "webgoat",
+    "native_id": "sqlinjection/mitigation/SqlOnlyInputValidationOnKeywords",
+    "name": "SQL Injection: SQL Only Input Validation On Keywords",
+    "category": "SQL Injection",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'SQL Injection' lesson (class SqlOnlyInputValidationOnKeywords, source path lessons/sqlinjection/mitigation/SqlOnlyInputValidationOnKeywords.java).",
+    "wstg_category_hint": "pb-sql-injection"
+  },
+  {
+    "id": "webgoat:ssrf/SSRFTask1",
+    "app": "webgoat",
+    "native_id": "ssrf/SSRFTask1",
+    "name": "Server-Side Request Forgery (SSRF): SSRF Task 1",
+    "category": "Server-Side Request Forgery (SSRF)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'Server-Side Request Forgery (SSRF)' lesson (class SSRFTask1, source path lessons/ssrf/SSRFTask1.java).",
+    "wstg_category_hint": "pb-ssrf"
+  },
+  {
+    "id": "webgoat:ssrf/SSRFTask2",
+    "app": "webgoat",
+    "native_id": "ssrf/SSRFTask2",
+    "name": "Server-Side Request Forgery (SSRF): SSRF Task 2",
+    "category": "Server-Side Request Forgery (SSRF)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'Server-Side Request Forgery (SSRF)' lesson (class SSRFTask2, source path lessons/ssrf/SSRFTask2.java).",
+    "wstg_category_hint": "pb-ssrf"
+  },
+  {
+    "id": "webgoat:vulnerablecomponents/VulnerableComponentsLesson",
+    "app": "webgoat",
+    "native_id": "vulnerablecomponents/VulnerableComponentsLesson",
+    "name": "Vulnerable Components: Vulnerable Components Lesson",
+    "category": "Vulnerable Components",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Vulnerable Components' lesson (class VulnerableComponentsLesson, source path lessons/vulnerablecomponents/VulnerableComponentsLesson.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:webgoatintroduction/MailAssignment",
+    "app": "webgoat",
+    "native_id": "webgoatintroduction/MailAssignment",
+    "name": "WebGoat Introduction: Mail Assignment",
+    "category": "WebGoat Introduction",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'WebGoat Introduction' lesson (class MailAssignment, source path lessons/webgoatintroduction/MailAssignment.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:webwolfintroduction/LandingAssignment",
+    "app": "webgoat",
+    "native_id": "webwolfintroduction/LandingAssignment",
+    "name": "WebWolf Introduction: Landing Assignment",
+    "category": "WebWolf Introduction",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'WebWolf Introduction' lesson (class LandingAssignment, source path lessons/webwolfintroduction/LandingAssignment.java).",
+    "wstg_category_hint": ""
+  },
+  {
+    "id": "webgoat:xss/CrossSiteScriptingLesson1",
+    "app": "webgoat",
+    "native_id": "xss/CrossSiteScriptingLesson1",
+    "name": "Cross-Site Scripting (XSS): Cross Site Scripting Lesson 1",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class CrossSiteScriptingLesson1, source path lessons/xss/CrossSiteScriptingLesson1.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/CrossSiteScriptingLesson5a",
+    "app": "webgoat",
+    "native_id": "xss/CrossSiteScriptingLesson5a",
+    "name": "Cross-Site Scripting (XSS): Cross Site Scripting Lesson 5a",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class CrossSiteScriptingLesson5a, source path lessons/xss/CrossSiteScriptingLesson5a.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/CrossSiteScriptingLesson6a",
+    "app": "webgoat",
+    "native_id": "xss/CrossSiteScriptingLesson6a",
+    "name": "Cross-Site Scripting (XSS): Cross Site Scripting Lesson 6a",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class CrossSiteScriptingLesson6a, source path lessons/xss/CrossSiteScriptingLesson6a.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/CrossSiteScriptingQuiz",
+    "app": "webgoat",
+    "native_id": "xss/CrossSiteScriptingQuiz",
+    "name": "Cross-Site Scripting (XSS): Cross Site Scripting Quiz",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 1,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class CrossSiteScriptingQuiz, source path lessons/xss/CrossSiteScriptingQuiz.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/DOMCrossSiteScripting",
+    "app": "webgoat",
+    "native_id": "xss/DOMCrossSiteScripting",
+    "name": "Cross-Site Scripting (XSS): DOM Cross Site Scripting",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class DOMCrossSiteScripting, source path lessons/xss/DOMCrossSiteScripting.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/DOMCrossSiteScriptingVerifier",
+    "app": "webgoat",
+    "native_id": "xss/DOMCrossSiteScriptingVerifier",
+    "name": "Cross-Site Scripting (XSS): DOM Cross Site Scripting Verifier",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class DOMCrossSiteScriptingVerifier, source path lessons/xss/DOMCrossSiteScriptingVerifier.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/mitigation/CrossSiteScriptingLesson3",
+    "app": "webgoat",
+    "native_id": "xss/mitigation/CrossSiteScriptingLesson3",
+    "name": "Cross-Site Scripting (XSS): Cross Site Scripting Lesson 3",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class CrossSiteScriptingLesson3, source path lessons/xss/mitigation/CrossSiteScriptingLesson3.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/mitigation/CrossSiteScriptingLesson4",
+    "app": "webgoat",
+    "native_id": "xss/mitigation/CrossSiteScriptingLesson4",
+    "name": "Cross-Site Scripting (XSS): Cross Site Scripting Lesson 4",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class CrossSiteScriptingLesson4, source path lessons/xss/mitigation/CrossSiteScriptingLesson4.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/stored/StoredCrossSiteScriptingVerifier",
+    "app": "webgoat",
+    "native_id": "xss/stored/StoredCrossSiteScriptingVerifier",
+    "name": "Cross-Site Scripting (XSS): Stored Cross Site Scripting Verifier",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class StoredCrossSiteScriptingVerifier, source path lessons/xss/stored/StoredCrossSiteScriptingVerifier.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xss/stored/StoredXssComments",
+    "app": "webgoat",
+    "native_id": "xss/stored/StoredXssComments",
+    "name": "Cross-Site Scripting (XSS): Stored Xss Comments",
+    "category": "Cross-Site Scripting (XSS)",
+    "difficulty": 3,
+    "description": "WebGoat lesson assignment in the 'Cross-Site Scripting (XSS)' lesson (class StoredXssComments, source path lessons/xss/stored/StoredXssComments.java).",
+    "wstg_category_hint": "pb-xss"
+  },
+  {
+    "id": "webgoat:xxe/BlindSendFileAssignment",
+    "app": "webgoat",
+    "native_id": "xxe/BlindSendFileAssignment",
+    "name": "XML External Entities (XXE): Blind Send File Assignment",
+    "category": "XML External Entities (XXE)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'XML External Entities (XXE)' lesson (class BlindSendFileAssignment, source path lessons/xxe/BlindSendFileAssignment.java).",
+    "wstg_category_hint": "pb-injection"
+  },
+  {
+    "id": "webgoat:xxe/ContentTypeAssignment",
+    "app": "webgoat",
+    "native_id": "xxe/ContentTypeAssignment",
+    "name": "XML External Entities (XXE): Content Type Assignment",
+    "category": "XML External Entities (XXE)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'XML External Entities (XXE)' lesson (class ContentTypeAssignment, source path lessons/xxe/ContentTypeAssignment.java).",
+    "wstg_category_hint": "pb-injection"
+  },
+  {
+    "id": "webgoat:xxe/SimpleXXE",
+    "app": "webgoat",
+    "native_id": "xxe/SimpleXXE",
+    "name": "XML External Entities (XXE): Simple XXE",
+    "category": "XML External Entities (XXE)",
+    "difficulty": 5,
+    "description": "WebGoat lesson assignment in the 'XML External Entities (XXE)' lesson (class SimpleXXE, source path lessons/xxe/SimpleXXE.java).",
+    "wstg_category_hint": "pb-injection"
+  }
+]

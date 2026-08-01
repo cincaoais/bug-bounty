@@ -26,6 +26,7 @@ API key, no background agents.
 - [A worked example](#a-worked-example)
 - [Skills reference](#skills-reference)
 - [Safety model](#safety-model)
+- [Autonomous sandbox mode (v0.2.0)](#autonomous-sandbox-mode-v020)
 - [Data & privacy](#data--privacy)
 - [Troubleshooting](#troubleshooting)
 - [Project layout](#project-layout)
@@ -393,6 +394,44 @@ confirm, **no weaponized payloads**.
 - Scope is checked by a hook outside the model; unknown host → denied.
 - Findings can't be created without a human-confirmation flag.
 - Ingested target content is treated as **data, never instructions** (prompt-injection posture) — mitigated in depth, though no defense is total.
+
+---
+
+## Autonomous sandbox mode (v0.2.0)
+
+Everything above is ingest-only. `bb-sandbox` is the one deliberate exception: an
+**opt-in** skill that autonomously discovers, exploits, and *scores* vulnerabilities —
+but only against a **local, deliberately-vulnerable training target** (OWASP Juice
+Shop or OWASP WebGoat), never a real program.
+
+```
+try to find bugs in OWASP Juice Shop, it's at http://localhost:3000
+```
+
+That single prompt runs a narrated recon → hypothesize → exploit → verify → record →
+score loop and ends in a **grounded scorecard** — read from the target app's own solve
+state (Juice Shop's `/api/Challenges`, WebGoat's `reportcard.mvc`), never from Claude's
+self-report. It's built for reps: watching *how* a bug gets found on a real-shaped app,
+not another definition dump.
+
+**Opt-in and localhost-only, by construction:**
+- It only activates for a target explicitly created with `mode="sandbox"` — every
+  existing target, and the entire ingest-only workflow above, is unaffected.
+- Traffic is confined to a `(host, port)` allow-list of loopback addresses only
+  (`127.0.0.1` / `localhost` / `[::1]` on the target's declared port) — no wildcards,
+  no override, deny on any ambiguous command.
+
+**Two-layer safety model — both required, neither is a backstop for the other:**
+
+| Layer | Enforces |
+|---|---|
+| Scope-guard hook | Deny-by-default allow-list, deny-on-ambiguity, no override — the same hook that gates real programs, running a stricter sandbox branch. |
+| Network isolation | The target container runs with no route off-box (Docker `--network internal` + `127.0.0.1`-only bind, or an isolated VirtualBox host-only VM) — the real backstop for what a hook structurally can't see (server-side SSRF, browser click/JS navigation). |
+
+Full setup — Docker and VirtualBox topologies, browser containment, preflight, and
+reset — is in [`docs/sandbox-setup.md`](docs/sandbox-setup.md). Read it before your
+first run; the skill's own preflight aborts rather than proceeding on unverified
+containment.
 
 ---
 

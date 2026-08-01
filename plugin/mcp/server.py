@@ -18,19 +18,29 @@ from mcp.server.fastmcp import FastMCP
 import correlate
 import coverage
 import ingest
+import mission
 import registry
 import report as report_mod
 import safety
+import sandbox
 
 mcp = FastMCP("bb")
 
 REFERENCE_DIR = Path(__file__).resolve().parent.parent / "reference"
 
+# app -> bundled objective catalog filename, for seed_objectives().
+_OBJECTIVE_CATALOGS = {
+    "juice-shop": "juiceshop-challenges.json",
+    "webgoat": "webgoat-lessons.json",
+}
+
 
 @mcp.tool()
-def create_target(handle: str, platform: str = "", confidentiality: str = "public") -> dict:
-    """Register a program/target and make it active. confidentiality: public|private|nda."""
-    return registry.create_target(handle, platform, confidentiality)
+def create_target(handle: str, platform: str = "", confidentiality: str = "public",
+                  mode: str = "bounty", sandbox_app: str = "") -> dict:
+    """Register a program/target and make it active. confidentiality: public|private|nda.
+    mode: bounty (default, real program) | sandbox (local training target, e.g. sandbox_app='juice-shop')."""
+    return registry.create_target(handle, platform, confidentiality, mode, sandbox_app)
 
 
 @mcp.tool()
@@ -179,45 +189,54 @@ def next_actions(handle: str, limit: int = 15, per_endpoint: int = 3) -> list[di
 # ---- findings graph: note -> lead -> primitive -> finding --------------------
 
 @mcp.tool()
-def add_note(handle: str, body: str, endpoint_id: int | None = None) -> dict:
+def add_note(handle: str, body: str, endpoint_id: int | None = None,
+            mission_id: int | None = None) -> dict:
     """Record a raw observation with no interpretation attached.
-    Capture early and cheaply — an unrecorded observation is gone by next session."""
-    return correlate.add_note(handle, body, endpoint_id)
+    Capture early and cheaply — an unrecorded observation is gone by next session.
+    mission_id optionally cross-links this note to a sandbox mission."""
+    return correlate.add_note(handle, body, endpoint_id, mission_id)
 
 
 @mcp.tool()
 def add_lead(handle: str, hypothesis: str, confidence: str = "medium",
-             note_ids: list[int] | None = None) -> dict:
-    """Record an observation PLUS a hypothesis about it. confidence: low|medium|high."""
-    return correlate.add_lead(handle, hypothesis, confidence, note_ids)
+             note_ids: list[int] | None = None, mission_id: int | None = None,
+             objective_id: str | None = None) -> dict:
+    """Record an observation PLUS a hypothesis about it. confidence: low|medium|high.
+    mission_id/objective_id optionally cross-link this lead to a sandbox mission objective."""
+    return correlate.add_lead(handle, hypothesis, confidence, note_ids, mission_id, objective_id)
 
 
 @mcp.tool()
 def add_primitive(handle: str, capability: str, description: str = "",
-                  evidence_id: int | None = None) -> dict:
+                  evidence_id: int | None = None, mission_id: int | None = None) -> dict:
     """Bank a CONFIRMED capability that is not a bug by itself (e.g. 'I can control
     the Host header and it reaches the backend'). Primitives are the raw material of
-    chains and the thing most often thrown away — record them even when they lead nowhere yet."""
-    return correlate.add_primitive(handle, capability, description, evidence_id)
+    chains and the thing most often thrown away — record them even when they lead nowhere yet.
+    mission_id optionally cross-links this primitive to a sandbox mission."""
+    return correlate.add_primitive(handle, capability, description, evidence_id, mission_id)
 
 
 @mcp.tool()
 def list_notes(handle: str, endpoint_id: int | None = None,
-               contains: str = "", limit: int = 50) -> list[dict]:
-    """List captured observations, optionally filtered by endpoint or substring."""
-    return correlate.list_notes(handle, endpoint_id, contains, limit)
+               contains: str = "", limit: int = 50,
+               mission_id: int | None = None) -> list[dict]:
+    """List captured observations, optionally filtered by endpoint, substring, or mission."""
+    return correlate.list_notes(handle, endpoint_id, contains, limit, mission_id)
 
 
 @mcp.tool()
-def list_leads(handle: str, status: str = "", limit: int = 50) -> list[dict]:
-    """List hypotheses. status: open|chasing|dead|promoted."""
-    return correlate.list_leads(handle, status, limit)
+def list_leads(handle: str, status: str = "", limit: int = 50,
+               mission_id: int | None = None) -> list[dict]:
+    """List hypotheses. status: open|chasing|dead|promoted. Optionally filtered by mission."""
+    return correlate.list_leads(handle, status, limit, mission_id)
 
 
 @mcp.tool()
-def list_primitives(handle: str, contains: str = "", limit: int = 50) -> list[dict]:
-    """List banked capabilities. Check these when looking for an escalation chain."""
-    return correlate.list_primitives(handle, contains, limit)
+def list_primitives(handle: str, contains: str = "", limit: int = 50,
+                    mission_id: int | None = None) -> list[dict]:
+    """List banked capabilities, optionally filtered by mission.
+    Check these when looking for an escalation chain."""
+    return correlate.list_primitives(handle, contains, limit, mission_id)
 
 
 @mcp.tool()
@@ -252,14 +271,205 @@ def dismiss_correlation(handle: str, a_ref: str, b_ref: str, reason: str = "") -
 
 @mcp.tool()
 def promote_to_finding(handle: str, lead_id: int, title: str, severity: str,
-                       body_md: str, human_confirmed: bool = False) -> dict:
+                       body_md: str, human_confirmed: bool = False,
+                       sandbox_auto_confirm: bool = False, mission_id: int | None = None,
+                       objective_id: str | None = None) -> dict:
     """Promote a lead to a confirmed finding. severity: info|low|medium|high|critical.
 
     REQUIRES human_confirmed=True and will refuse otherwise. You must never decide a
     vulnerability is real — ask the user to confirm they have independently reproduced
-    it, and only then pass True. Never pass True on your own initiative."""
+    it, and only then pass True. Never pass True on your own initiative.
+
+    sandbox_auto_confirm=True is the ONE exception, and this wrapper enforces it
+    itself rather than trusting the caller: it independently re-checks that the
+    ACTIVE target is server-read sandbox mode AND that (mission_id, objective_id)
+    is recorded solved. Only if BOTH hold does it synthesize human_confirmed=True
+    for the underlying call — correlate.py's own human_confirmed wall is never
+    modified and still enforces the real requirement on every other path (a real
+    program, or a sandbox objective that isn't actually solved, falls straight
+    through to your own human_confirmed, unchanged)."""
+    confirmed = human_confirmed
+    if sandbox_auto_confirm is True:
+        if (registry.is_sandbox() and mission_id is not None and objective_id is not None
+                and mission.result_solved(handle, mission_id, objective_id)):
+            confirmed = True
     return correlate.promote_to_finding(handle, lead_id, title, severity,
-                                        body_md, human_confirmed)
+                                        body_md, confirmed)
+
+
+# ---- sandbox missions (record-only; Slice 3.2) --------------------------------
+
+@mcp.tool()
+def create_sandbox_mission(handle: str, base_url: str, human_ack: bool = False,
+                           objective_filter: str | list[str] | None = None,
+                           baseline: list[str] | None = None) -> dict:
+    """Start a sandbox training mission against the ACTIVE target.
+
+    REFUSES with a structured error (never raises) unless human_ack=True AND the
+    ACTIVE target's mode is server-verified 'sandbox' — the caller's claim about
+    mode is never trusted, only registry.is_sandbox() is. `app` is read from the
+    active target's sandbox_app, not accepted as a parameter. `baseline` lists
+    objective ids already solved before this run starts, so a rerun on a
+    never-reset app can't claim someone else's prior work as credit."""
+    if human_ack is not True:
+        return {"error": "create_sandbox_mission requires human_ack=True (explicit human acknowledgement)"}
+    if not registry.is_sandbox():
+        return {"error": "create_sandbox_mission refused: the active target is not in sandbox mode"}
+    target = registry.active_target()
+    app = (target or {}).get("sandbox_app") or ""
+    if not app:
+        return {"error": "create_sandbox_mission refused: the active sandbox target has no sandbox_app set"}
+    return mission.create_mission(handle, app=app, base_url=base_url,
+                                  baseline=baseline or [], objective_filter=objective_filter,
+                                  human_ack=True)
+
+
+@mcp.tool()
+def seed_objectives(handle: str, app: str) -> dict:
+    """Load the bundled objective catalog for a sandbox app into this target's
+    objective table. app: 'juice-shop' | 'webgoat'. Safe to re-run (upserts by id),
+    mirrors seed_test_cases."""
+    fname = _OBJECTIVE_CATALOGS.get(app)
+    if not fname:
+        return {"seeded": 0, "error": f"unknown app {app!r}, must be one of {sorted(_OBJECTIVE_CATALOGS)}"}
+    p = REFERENCE_DIR / fname
+    if not p.exists():
+        return {"seeded": 0, "error": f"no reference data found at {p}"}
+    objectives = json.loads(p.read_text(encoding="utf-8"))
+    out = mission.seed_objectives(handle, objectives)
+    out["app"] = app
+    return out
+
+
+@mcp.tool()
+def list_objectives(handle: str, app: str = "", category: str = "", difficulty: int | None = None,
+                    mission_id: int | None = None, unsolved_only: bool = False) -> list[dict]:
+    """List catalogued sandbox objectives, optionally filtered. When mission_id is
+    given, each objective also carries that mission's solved/baseline_solved/
+    evidence_id/polls; unsolved_only only makes sense together with mission_id."""
+    return mission.list_objectives(handle, app=app, category=category, difficulty=difficulty,
+                                   mission_id=mission_id, unsolved_only=unsolved_only)
+
+
+@mcp.tool()
+def record_objective_result(handle: str, mission_id: int, objective_id: str, solved: bool,
+                            evidence_id: int | None = None, solved_at: str | None = None,
+                            source: str = "api", force: bool = False) -> dict:
+    """Record what Claude observed by polling the sandboxed app's own state.
+    Requires evidence_id whenever solved=True; monotonic (a later solved=False
+    report can't take back a confirmed win — it's refused, not applied).
+
+    HARD requirement (checked here, before anything is recorded): when
+    solved=True AND an evidence_id is given, it must resolve to a real stored
+    evidence item with actual content. A nonexistent evidence_id, or one
+    whose blob is missing/empty, is REFUSED outright — `{"refused": ...,
+    "recorded": False}` — and nothing is written to the
+    mission_objective_result row, so a fabricated or dangling evidence_id can
+    never credit points. This is a hard gate, not the sanity_check below,
+    which stays soft. (solved=True with evidence_id=None is a different,
+    pre-existing case: mission.record_objective_result itself raises
+    ValueError for that, unchanged.)
+
+    Refuses (without modifying anything) once the mission is completed,
+    unless force=True — see mission.record_objective_result.
+
+    Adds a SOFT `sanity_check`: when solved=True (and evidence resolved), the
+    stored evidence text is scanned for a solve-indicating token (the objective's
+    name/native_id, or a `"solved":true`-shaped string) and sanity_check is set to
+    'confirmed' or 'not confirmed in evidence text' accordingly. This NEVER blocks
+    the record — it's a hint for the human/skill reviewing the mission, nothing more."""
+    ev = None
+    if solved and evidence_id is not None:
+        try:
+            ev = report_mod.get_evidence(handle, evidence_id)
+        except ValueError as e:
+            return {"refused": f"evidence_id {evidence_id} does not resolve to stored evidence: {e}",
+                    "recorded": False}
+        if not ev or not (ev.get("body") or "").strip():
+            return {"refused": f"evidence_id {evidence_id} resolves to empty/no-content evidence",
+                    "recorded": False}
+
+    result = mission.record_objective_result(handle, mission_id, objective_id, solved,
+                                              evidence_id=evidence_id, solved_at=solved_at,
+                                              source=source, force=force)
+    if result.get("refused"):
+        return result
+
+    sanity_check = None
+    if solved and ev is not None:
+        sanity_check = "not confirmed in evidence text"
+        body = (ev.get("body") or "").lower()
+        tokens = {'"solved":true', "solved: true", "solved:true"}
+        obj = next(
+            (o for o in mission.list_objectives(handle, mission_id=mission_id)
+             if o["id"] == objective_id),
+            None,
+        )
+        if obj:
+            if obj.get("name"):
+                tokens.add(str(obj["name"]).lower())
+            if obj.get("native_id"):
+                tokens.add(str(obj["native_id"]).lower())
+        if any(tok and tok in body for tok in tokens):
+            sanity_check = "confirmed"
+    result["sanity_check"] = sanity_check
+    return result
+
+
+@mcp.tool()
+def log_attempt(handle: str, mission_id: int, phase: str, action_summary: str,
+                reasoning_md: str = "", objective_id: str | None = None,
+                endpoint_id: int | None = None, test_case_id: str | None = None,
+                tool_used: str = "", outcome: str = "info",
+                evidence_id: int | None = None) -> dict:
+    """Append one narrated attempt to the mission timeline. Returns
+    attempts_used/attempts_remaining/over_cap for the (mission, objective) pair
+    (cap=5) — the run loop is responsible for moving to the next objective once
+    over_cap comes back True; this call never refuses to log."""
+    return mission.log_attempt(handle, mission_id, phase, action_summary,
+                               reasoning_md=reasoning_md, objective_id=objective_id,
+                               endpoint_id=endpoint_id, test_case_id=test_case_id,
+                               tool_used=tool_used, outcome=outcome, evidence_id=evidence_id)
+
+
+@mcp.tool()
+def mission_log(handle: str, mission_id: int, objective_id: str | None = None,
+                phase: str = "", outcome: str = "", limit: int = 200) -> list[dict]:
+    """List a mission's narrated attempt timeline, optionally filtered."""
+    return mission.mission_log(handle, mission_id, objective_id=objective_id,
+                               phase=phase, outcome=outcome, limit=limit)
+
+
+@mcp.tool()
+def mission_scorecard(handle: str, mission_id: int) -> dict:
+    """Grounded scorecard for a mission: served frozen once complete_mission has
+    run, computed live from current rows otherwise."""
+    return mission.mission_scorecard(handle, mission_id)
+
+
+@mcp.tool()
+def complete_mission(handle: str, mission_id: int, status: str = "completed",
+                     force: bool = False) -> dict:
+    """Freeze the scorecard exactly once. A second call on an already-completed
+    mission returns the frozen copy unchanged unless force=True explicitly asks
+    for a recompute."""
+    return mission.complete_mission(handle, mission_id, status=status, force=force)
+
+
+@mcp.tool()
+def list_missions(handle: str, status: str = "", limit: int = 20) -> list[dict]:
+    """List missions for a target, most recent first, optionally filtered by status."""
+    return mission.list_missions(handle, status=status, limit=limit)
+
+
+@mcp.tool()
+def assemble_after_action_report(handle: str, mission_id: int) -> dict:
+    """Draft a mission after-action report from STORED DATA ONLY: mission info,
+    scorecard, solved/missed objectives with evidence links, the attempt timeline,
+    and what to learn next (cross-referencing wstg_category_hint on missed
+    objectives). Any section without supporting stored data is rendered as a
+    literal [NO DATA: ...] marker and listed in `gaps` — never fabricated."""
+    return mission.assemble_after_action_report(handle, mission_id)
 
 
 # ---- evidence + reporting ----------------------------------------------------
@@ -313,6 +523,49 @@ def health_check() -> dict:
     repo with a remote (leak risk), and whether ANTHROPIC_API_KEY is overriding the
     subscription. Run this once after install and if anything seems off."""
     return safety.health()
+
+
+@mcp.tool()
+def sandbox_preflight(network_mode: str = "", port_bindings: str = "") -> dict:
+    """Pre-run checklist for autonomous sandbox mode: proxy env clear, active target is
+    sandbox, allow-list rules declared, and network isolation the SKILL confirms by
+    pasting `docker inspect` NetworkMode + port-binding output into network_mode/
+    port_bindings — this tool makes no network/subprocess call of its own."""
+    checks = []
+
+    proxy_set, which = sandbox.proxy_env_set()
+    checks.append({
+        "name": "proxy_env",
+        "status": "fail" if proxy_set else "pass",
+        "detail": f"{which} is set — unset it before an autonomous sandbox run" if proxy_set
+                  else "no HTTP_PROXY/HTTPS_PROXY/ALL_PROXY set",
+    })
+
+    is_sbx = registry.is_sandbox()
+    checks.append({
+        "name": "active_target_sandbox",
+        "status": "pass" if is_sbx else "fail",
+        "detail": "active target mode is sandbox" if is_sbx
+                  else "active target is not in sandbox mode (or no target is active)",
+    })
+
+    rules = registry.sandbox_rules()
+    checks.append({
+        "name": "allow_list_rules",
+        "status": "pass" if rules else "fail",
+        "detail": f"{len(rules)} sandbox allow-list rule(s) declared" if rules
+                  else "no sandbox allow-list rules declared for the active target",
+    })
+
+    iso_status, iso_detail = sandbox.network_isolation_check(network_mode, port_bindings)
+    checks.append({"name": "network_isolation_verified", "status": iso_status, "detail": iso_detail})
+
+    # `ready` requires network_isolation_verified to be an explicit "pass" —
+    # not merely "not fail". "warn" (unconfirmed — no docker inspect output
+    # given yet) must NOT read as ready for an autonomous run; only a
+    # positively-confirmed internal-network + loopback-only bind does.
+    ready = all(c["status"] != "fail" for c in checks) and iso_status == "pass"
+    return {"checks": checks, "ready": ready}
 
 
 if __name__ == "__main__":

@@ -70,14 +70,15 @@ def _tokenize(text: str) -> set[str]:
 
 # ---- note / lead / primitive / finding CRUD --------------------------------
 
-def add_note(handle: str, body: str, endpoint_id: int | None = None) -> dict:
+def add_note(handle: str, body: str, endpoint_id: int | None = None,
+             mission_id: int | None = None) -> dict:
     path = db.target_db_path(handle)
     db.init_target_db(path)
     conn = db.connect(path)
     try:
         cur = conn.execute(
-            "INSERT INTO note (body_md, endpoint_id, created_at) VALUES (?,?,?)",
-            (body, endpoint_id, _now()),
+            "INSERT INTO note (body_md, endpoint_id, created_at, mission_id) VALUES (?,?,?,?)",
+            (body, endpoint_id, _now(), mission_id),
         )
         conn.commit()
         return {"id": cur.lastrowid}
@@ -86,7 +87,8 @@ def add_note(handle: str, body: str, endpoint_id: int | None = None) -> dict:
 
 
 def add_lead(handle: str, hypothesis: str, confidence: str = "medium",
-             note_ids: list[int] | None = None) -> dict:
+             note_ids: list[int] | None = None, mission_id: int | None = None,
+             objective_id: str | None = None) -> dict:
     if confidence not in VALID_CONFIDENCE:
         raise ValueError(f"invalid confidence {confidence!r}, must be one of {sorted(VALID_CONFIDENCE)}")
     path = db.target_db_path(handle)
@@ -94,8 +96,9 @@ def add_lead(handle: str, hypothesis: str, confidence: str = "medium",
     conn = db.connect(path)
     try:
         cur = conn.execute(
-            "INSERT INTO lead (hypothesis, confidence, status, created_at) VALUES (?,?,?,?)",
-            (hypothesis, confidence, "open", _now()),
+            "INSERT INTO lead (hypothesis, confidence, status, created_at, mission_id, objective_id) "
+            "VALUES (?,?,?,?,?,?)",
+            (hypothesis, confidence, "open", _now(), mission_id, objective_id),
         )
         lead_id = cur.lastrowid
         for note_id in (note_ids or []):
@@ -107,14 +110,15 @@ def add_lead(handle: str, hypothesis: str, confidence: str = "medium",
 
 
 def add_primitive(handle: str, capability: str, description: str = "",
-                   evidence_id: int | None = None) -> dict:
+                   evidence_id: int | None = None, mission_id: int | None = None) -> dict:
     path = db.target_db_path(handle)
     db.init_target_db(path)
     conn = db.connect(path)
     try:
         cur = conn.execute(
-            "INSERT INTO primitive (capability, description, evidence_id, created_at) VALUES (?,?,?,?)",
-            (capability, description, evidence_id, _now()),
+            "INSERT INTO primitive (capability, description, evidence_id, created_at, mission_id) "
+            "VALUES (?,?,?,?,?)",
+            (capability, description, evidence_id, _now(), mission_id),
         )
         conn.commit()
         return {"id": cur.lastrowid}
@@ -123,7 +127,7 @@ def add_primitive(handle: str, capability: str, description: str = "",
 
 
 def list_notes(handle: str, endpoint_id: int | None = None, contains: str = "",
-                limit: int = 50) -> list[dict]:
+                limit: int = 50, mission_id: int | None = None) -> list[dict]:
     path = db.target_db_path(handle)
     if not path.exists():
         return []
@@ -137,6 +141,9 @@ def list_notes(handle: str, endpoint_id: int | None = None, contains: str = "",
         if contains:
             sql += " AND body_md LIKE ?"
             args.append(f"%{contains}%")
+        if mission_id is not None:
+            sql += " AND mission_id=?"
+            args.append(mission_id)
         sql += " ORDER BY id DESC LIMIT ?"
         args.append(limit)
         return [dict(r) for r in conn.execute(sql, args).fetchall()]
@@ -144,7 +151,8 @@ def list_notes(handle: str, endpoint_id: int | None = None, contains: str = "",
         conn.close()
 
 
-def list_leads(handle: str, status: str = "", limit: int = 50) -> list[dict]:
+def list_leads(handle: str, status: str = "", limit: int = 50,
+               mission_id: int | None = None) -> list[dict]:
     path = db.target_db_path(handle)
     if not path.exists():
         return []
@@ -155,6 +163,9 @@ def list_leads(handle: str, status: str = "", limit: int = 50) -> list[dict]:
         if status:
             sql += " AND status=?"
             args.append(status)
+        if mission_id is not None:
+            sql += " AND mission_id=?"
+            args.append(mission_id)
         sql += " ORDER BY id DESC LIMIT ?"
         args.append(limit)
         rows = [dict(r) for r in conn.execute(sql, args).fetchall()]
@@ -172,7 +183,8 @@ def list_leads(handle: str, status: str = "", limit: int = 50) -> list[dict]:
         conn.close()
 
 
-def list_primitives(handle: str, contains: str = "", limit: int = 50) -> list[dict]:
+def list_primitives(handle: str, contains: str = "", limit: int = 50,
+                    mission_id: int | None = None) -> list[dict]:
     path = db.target_db_path(handle)
     if not path.exists():
         return []
@@ -183,6 +195,9 @@ def list_primitives(handle: str, contains: str = "", limit: int = 50) -> list[di
         if contains:
             sql += " AND (capability LIKE ? OR description LIKE ?)"
             args.extend([f"%{contains}%", f"%{contains}%"])
+        if mission_id is not None:
+            sql += " AND mission_id=?"
+            args.append(mission_id)
         sql += " ORDER BY id DESC LIMIT ?"
         args.append(limit)
         return [dict(r) for r in conn.execute(sql, args).fetchall()]

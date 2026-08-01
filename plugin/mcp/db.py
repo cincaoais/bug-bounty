@@ -16,7 +16,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA_REGISTRY = """
 CREATE TABLE IF NOT EXISTS target (
@@ -95,6 +95,41 @@ CREATE TABLE IF NOT EXISTS evidence (
 CREATE TABLE IF NOT EXISTS correlation_dismissed (
   pair_key TEXT PRIMARY KEY, a_ref TEXT, b_ref TEXT, reason TEXT, dismissed_at TEXT
 );
+-- Sandbox mode (v2): mission/objective/scoring tables. Mirrors the coverage
+-- ledger's shape (a catalog table + a result table keyed against it) rather
+-- than inventing a new pattern.
+CREATE TABLE IF NOT EXISTS mission (
+  id INTEGER PRIMARY KEY,
+  app TEXT, base_url TEXT, objective_filter TEXT,
+  status TEXT DEFAULT 'running',
+  human_ack INTEGER DEFAULT 0,
+  started_at TEXT, ended_at TEXT, duration_seconds INTEGER,
+  scoring_version TEXT, scorecard_json TEXT
+);
+CREATE TABLE IF NOT EXISTS objective (
+  id TEXT PRIMARY KEY,
+  app TEXT, native_id TEXT, name TEXT, category TEXT,
+  difficulty INTEGER DEFAULT 1, description TEXT, wstg_category_hint TEXT
+);
+CREATE TABLE IF NOT EXISTS mission_objective_result (
+  id INTEGER PRIMARY KEY,
+  mission_id INTEGER, objective_id TEXT,
+  baseline_solved INTEGER DEFAULT 0,
+  solved INTEGER DEFAULT 0,
+  solved_at TEXT, evidence_id INTEGER, polls INTEGER DEFAULT 0,
+  UNIQUE(mission_id, objective_id)
+);
+CREATE TABLE IF NOT EXISTS mission_attempt (
+  id INTEGER PRIMARY KEY,
+  mission_id INTEGER, seq INTEGER, objective_id TEXT, endpoint_id INTEGER,
+  test_case_id TEXT, phase TEXT, tool_used TEXT, action_summary TEXT,
+  reasoning_md TEXT, outcome TEXT, evidence_id INTEGER, created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS sandbox_audit (
+  id INTEGER PRIMARY KEY,
+  tool_name TEXT, decision TEXT, host TEXT, port INTEGER, reason TEXT,
+  command_excerpt TEXT, created_at TEXT
+);
 """
 
 _SAFE = re.compile(r"[^a-z0-9._-]+")
@@ -136,10 +171,25 @@ def connect(path) -> sqlite3.Connection:
     return conn
 
 
+def _add_column_if_missing(conn: sqlite3.Connection, table: str, coldef_sql: str) -> None:
+    """Add a column to `table` if it doesn't already exist. The only tolerated failure
+    is sqlite's 'duplicate column name' error (idempotent re-run); anything else is a
+    real problem and must not be swallowed."""
+    try:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {coldef_sql}")
+    except sqlite3.OperationalError as e:
+        if "duplicate column" not in str(e).lower():
+            raise
+
+
 def init_registry() -> None:
     conn = connect(registry_path())
     try:
         conn.executescript(SCHEMA_REGISTRY)
+        # Sandbox mode (v2): additive, nullable-safe columns on an existing table
+        # can't go through CREATE TABLE IF NOT EXISTS, so they're guarded ALTERs.
+        _add_column_if_missing(conn, "target", "mode TEXT NOT NULL DEFAULT 'bounty'")
+        _add_column_if_missing(conn, "target", "sandbox_app TEXT NOT NULL DEFAULT ''")
         conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         conn.commit()
     finally:
@@ -150,6 +200,13 @@ def init_target_db(path) -> None:
     conn = connect(path)
     try:
         conn.executescript(SCHEMA_TARGET)
+        # Sandbox mode (v2): cross-link the note/lead/primitive ledger to a
+        # mission without a migration framework — additive, nullable columns
+        # via the same dup-column-only guarded ALTER used in init_registry.
+        _add_column_if_missing(conn, "note", "mission_id INTEGER")
+        _add_column_if_missing(conn, "lead", "mission_id INTEGER")
+        _add_column_if_missing(conn, "primitive", "mission_id INTEGER")
+        _add_column_if_missing(conn, "lead", "objective_id TEXT")
         conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         conn.commit()
     finally:

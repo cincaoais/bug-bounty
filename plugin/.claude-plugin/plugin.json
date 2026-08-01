@@ -1,7 +1,7 @@
 {
   "name": "bb",
-  "version": "0.1.1",
-  "description": "Human-in-the-loop bug bounty research assistant: coverage ledger, scope enforcement, methodology, and grounded reporting. Ingest-only; generates no traffic to targets.",
+  "version": "0.2.0",
+  "description": "Human-in-the-loop bug bounty research assistant: coverage ledger, scope enforcement, methodology, and grounded reporting. Ingest-only for real programs; generates no traffic to real targets. Adds an opt-in, localhost-only autonomous sandbox mode for training against local OWASP Juice Shop / WebGoat.",
   "author": { "name": "bug-bounty" },
   "hooks": {
     "PreToolUse": [
@@ -13,6 +13,26 @@
       },
       {
         "matcher": "mcp__burp__send_.*",
+        "hooks": [
+          { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
+        ]
+      },
+      {
+        "matcher": "WebFetch",
+        "hooks": [
+          { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
+        ]
+      },
+      {
+        "matcher": "mcp__claude-in-chrome__.*",
+        "hooks": [
+          { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
         "hooks": [
           { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
         ]
