@@ -526,11 +526,14 @@ def health_check() -> dict:
 
 
 @mcp.tool()
-def sandbox_preflight(network_mode: str = "", port_bindings: str = "") -> dict:
+def sandbox_preflight(network_mode: str = "", port_bindings: str = "",
+                      egress_test: str = "") -> dict:
     """Pre-run checklist for autonomous sandbox mode: proxy env clear, active target is
     sandbox, allow-list rules declared, and network isolation the SKILL confirms by
-    pasting `docker inspect` NetworkMode + port-binding output into network_mode/
-    port_bindings — this tool makes no network/subprocess call of its own."""
+    pasting `docker inspect` NetworkMode + port-binding output AND an egress-probe
+    verdict (EGRESS_BLOCKED / EGRESS_OPEN) into network_mode/port_bindings/egress_test.
+    Egress is verified by a real probe, not the network name (a network can look
+    internal and still egress). This tool makes no network/subprocess call of its own."""
     checks = []
 
     proxy_set, which = sandbox.proxy_env_set()
@@ -557,7 +560,7 @@ def sandbox_preflight(network_mode: str = "", port_bindings: str = "") -> dict:
                   else "no sandbox allow-list rules declared for the active target",
     })
 
-    iso_status, iso_detail = sandbox.network_isolation_check(network_mode, port_bindings)
+    iso_status, iso_detail = sandbox.network_isolation_check(network_mode, port_bindings, egress_test)
     checks.append({"name": "network_isolation_verified", "status": iso_status, "detail": iso_detail})
 
     # `ready` requires network_isolation_verified to be an explicit "pass" —

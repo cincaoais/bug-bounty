@@ -307,50 +307,80 @@ def proxy_env_set() -> tuple[bool, str]:
 _IPV4_RE = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
 
 
-def network_isolation_check(network_mode: str, port_bindings: str) -> tuple[str, str]:
+def network_isolation_check(network_mode: str, port_bindings: str,
+                            egress_test: str = "") -> tuple[str, str]:
     """(status, detail) for sandbox_preflight's `network_isolation_verified` check.
     status is one of "pass" | "warn" | "fail".
 
     This module still makes no subprocess/network call (module docstring's
-    invariant): `network_mode`/`port_bindings` are text the SKILL pasted in
-    after running `docker inspect <container> --format '{{.HostConfig.NetworkMode}}'`
-    and a port-binding check — this function only pattern-matches that text.
+    invariant): all three params are TEXT the SKILL pasted in after running
+    the probes itself. It only pattern-matches that text.
 
-      - "warn": both params empty — containment hasn't been checked yet.
-      - "pass": network_mode names an internal network (contains "internal",
-        case-insensitive — matches a literal `internal` network name and any
-        caller-declared variant like `bb_internal`) AND port_bindings shows a
-        127.0.0.1 bind with no other IPv4 address present (so a `0.0.0.0` or
-        a LAN/public bind alongside it still fails, not just an exact string
-        match on "0.0.0.0").
-      - "fail": params were given but don't establish both of the above.
+    Containment requires BOTH, verified empirically:
+      1. port_bindings shows a 127.0.0.1-only bind (no `0.0.0.0`/LAN/public IP);
+      2. egress_test proves the container CANNOT reach the internet.
+
+    Egress is checked by an ACTUAL probe, not by the network name — a network
+    can be named/flagged "internal" and still egress (verified on Docker
+    Desktop's WSL2 backend, where an `--internal` net won't publish a port and
+    a masquerade-disabled bridge still reaches the internet; see
+    docs/sandbox-setup.md). The SKILL runs, e.g.,
+      docker run --rm --network <net> alpine sh -c \
+        "wget -T5 -q -O/dev/null http://1.1.1.1 && echo EGRESS_OPEN || echo EGRESS_BLOCKED"
+    and pastes the verdict as `egress_test`. `network_mode` is now advisory
+    only (kept in the detail string as a hint).
+
+      - "warn": nothing to check yet, or binding is loopback-only but egress is
+        still unconfirmed — NOT ready (an unconfirmed boundary is not a boundary).
+      - "pass": loopback-only bind AND egress probe positively BLOCKED.
+      - "fail": a non-loopback bind, or the egress probe shows the internet is
+        reachable (not contained).
     """
     nm = (network_mode or "").strip()
     pb = (port_bindings or "").strip()
+    et = (egress_test or "").strip().lower()
 
-    if not nm and not pb:
+    if not nm and not pb and not et:
         return ("warn",
                 "unconfirmed — run `docker inspect <container> --format "
-                "'{{.HostConfig.NetworkMode}}'` and a port-binding check (e.g. "
-                "`docker port <container>`), then pass the results as "
-                "network_mode/port_bindings before an autonomous run")
+                "'{{.HostConfig.NetworkMode}}'`, a port-binding check (`docker port "
+                "<container>`), AND an egress probe (see docs/sandbox-setup.md); pass "
+                "the results as network_mode/port_bindings/egress_test before a run")
 
-    is_internal = "internal" in nm.lower()
     ips = _IPV4_RE.findall(pb)
     bound_localhost = "127.0.0.1" in ips
     non_loopback = any(ip != "127.0.0.1" for ip in ips)
 
-    if is_internal and bound_localhost and not non_loopback:
-        return ("pass", f"network_mode={nm!r} is internal; port binding is 127.0.0.1-only")
+    egress_open = any(t in et for t in ("egress_open", "reachable", "not contained"))
+    egress_blocked = (not egress_open) and any(
+        t in et for t in ("egress_blocked", "blocked", "unreachable", "no route", "timed out", "timeout"))
+
+    if bound_localhost and not non_loopback and egress_blocked:
+        info = "127.0.0.1-only bind; egress probe confirms BLOCKED"
+        if "internal" in nm.lower():
+            info += f"; network_mode={nm!r} is internal"
+        return ("pass", info)
+
+    # "warn" ONLY when the binding is positively loopback-only and egress simply
+    # hasn't been probed yet. A missing/partial input (no port binding) is a
+    # fail-closed FAIL, not a warn — you can't confirm what you weren't shown.
+    if bound_localhost and not non_loopback and not et:
+        return ("warn",
+                "port binding is loopback-only but egress is unconfirmed — run the egress "
+                "probe (docs/sandbox-setup.md) and pass its result as egress_test")
 
     reasons = []
-    if not is_internal:
-        reasons.append(f"network_mode {nm!r} does not indicate an internal network")
+    if not bound_localhost:
+        reasons.append(f"port_bindings does not show a 127.0.0.1 bind: {pb!r}")
     if non_loopback:
         reasons.append(f"port_bindings shows a non-loopback bind: {pb!r}")
-    elif not bound_localhost:
-        reasons.append(f"port_bindings does not show a 127.0.0.1 bind: {pb!r}")
-    return ("fail", "; ".join(reasons))
+    if egress_open:
+        reasons.append("egress probe shows the container CAN reach the internet (not contained) — "
+                       "Docker Desktop cannot egress-lock a published container; use a "
+                       "VirtualBox host-only VM (docs/sandbox-setup.md)")
+    elif et and not egress_blocked:
+        reasons.append(f"egress_test {et!r} is inconclusive (expected EGRESS_BLOCKED / EGRESS_OPEN)")
+    return ("fail", "; ".join(reasons) or "containment not established")
 
 
 if __name__ == "__main__":  # tiny self-check; real coverage is tests/test_sandbox.py

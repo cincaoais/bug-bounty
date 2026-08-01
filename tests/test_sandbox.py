@@ -368,13 +368,13 @@ def test_network_isolation_warn_when_both_params_empty():
 
 
 def test_network_isolation_pass_on_internal_and_loopback_bind():
-    status, _ = network_isolation_check("internal", "127.0.0.1:3000->3000/tcp")
+    status, _ = network_isolation_check("internal", "127.0.0.1:3000->3000/tcp", "EGRESS_BLOCKED")
     assert status == "pass"
 
 
 def test_network_isolation_pass_on_caller_declared_internal_net_name():
     # a custom network literally named "bb_internal" still contains "internal"
-    status, _ = network_isolation_check("bb_internal", "127.0.0.1:3000->3000/tcp")
+    status, _ = network_isolation_check("bb_internal", "127.0.0.1:3000->3000/tcp", "EGRESS_BLOCKED")
     assert status == "pass"
 
 
@@ -384,10 +384,24 @@ def test_network_isolation_fail_on_0_0_0_0_bind():
     assert "non-loopback" in reason
 
 
-def test_network_isolation_fail_on_non_internal_mode():
-    status, reason = network_isolation_check("bridge", "127.0.0.1:3000->3000/tcp")
+def test_network_isolation_fail_on_egress_open_even_if_loopback_bound():
+    # the network NAME is advisory now; an EGRESS_OPEN probe is a hard fail even with a
+    # loopback bind and an "internal"-looking name (the Docker Desktop reality).
+    status, reason = network_isolation_check("bb-internal", "127.0.0.1:3000->3000/tcp", "EGRESS_OPEN")
     assert status == "fail"
-    assert "does not indicate an internal network" in reason
+    assert "reach the internet" in reason
+
+
+def test_network_isolation_pass_ignores_non_internal_name_when_egress_blocked():
+    # a plain "bridge" network still PASSES when egress is empirically blocked
+    status, _ = network_isolation_check("bridge", "127.0.0.1:3000->3000/tcp", "EGRESS_BLOCKED")
+    assert status == "pass"
+
+
+def test_network_isolation_warn_when_egress_unconfirmed():
+    # loopback bind but no egress probe yet -> warn (not ready), never pass
+    status, _ = network_isolation_check("internal", "127.0.0.1:3000->3000/tcp", "")
+    assert status == "warn"
 
 
 def test_network_isolation_fail_on_routable_lan_bind():

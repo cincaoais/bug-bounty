@@ -162,7 +162,8 @@ def test_sandbox_mission_end_to_end_flow():
 
         server.switch_target(handle)   # back to the sandbox target + its allow-list
         ready_check = server.sandbox_preflight(network_mode="internal",
-                                               port_bindings="127.0.0.1:3000->3000/tcp")
+                                               port_bindings="127.0.0.1:3000->3000/tcp",
+                                               egress_test="EGRESS_BLOCKED")
         by_name = {c["name"]: c for c in ready_check["checks"]}
         assert by_name["active_target_sandbox"]["status"] == "pass"
         assert by_name["allow_list_rules"]["status"] == "pass"

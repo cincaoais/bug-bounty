@@ -39,87 +39,57 @@ But a `PreToolUse` hook is software running alongside the model — it cannot se
 - a **browser click or JS-driven navigation** the agent makes inside a Chrome tab —
   this is invisible to a hook that only inspects tool-call arguments.
 
-That's why the target itself must run with **no route off the sandbox network** —
-Docker's `--internal` network mode or a VirtualBox host-only adapter with no internet
-route. If the container/VM can't reach the outside world at the network layer, none of
-the above failure modes matter, regardless of what the hook approved.
+That's why the target itself must run with **no route off the sandbox network**. Which
+topology actually delivers that is not obvious — a live test on 2026-08-01 settled it:
+
+> **⚠️ Verified finding (2026-08-01): Docker Desktop for Windows cannot give you
+> "reachable from the host AND egress-locked" with plain Docker networking.**
+> - `--network internal` blocks egress but **won't publish `-p` ports** on Docker
+>   Desktop — the target becomes unreachable (`docker port` shows no binding).
+> - A bridge with `com.docker.network.bridge.enable_ip_masquerade=false` publishes the
+>   port but **does not block egress** under the WSL2 backend — a container on it still
+>   reached `1.1.1.1`.
+>
+> You get one or the other, never both. For a genuinely **contained** autonomous run,
+> use the **VirtualBox host-only VM** (below) — no NAT/internet route by design. Docker
+> Desktop is fine only for a **reduced-containment preview** where you drive by `curl`
+> and deliberately avoid the SSRF/external-fetch challenges. The skill's preflight now
+> runs a real egress probe and will (correctly) **abort** a Docker Desktop run that
+> isn't actually egress-locked — the network's *name* is never taken as proof.
 
 ---
 
-## Default topology — Docker Desktop (hardened)
+## Preview topology — Docker Desktop (reachable, but NOT egress-locked)
 
-Use this if Docker Desktop is installed and working on your Windows box. This is the
-default; use the VirtualBox fallback below only if Docker Desktop isn't available.
-
-### 1. Create the egress-locked network [you, terminal, one-time]
-
-```
-docker network create --internal bb-sandbox
-```
-
-**Why `--internal`:** containers on an internal network get no default route to any
-other network — Docker's own docs put it plainly: *"no default route is configured and
-firewall rules are set up to drop all traffic to or from other networks."* A container
-on `bb-sandbox` cannot phone out, full stop. This is what actually blocks
-server-side SSRF from inside the app — not the hook, not a firewall rule you have to
-remember.
-
-### 2. Run the targets, bound to loopback only
+Use this ONLY for a quick **preview** of the capability. Per the finding above, Docker
+Desktop can't egress-lock a published container, so this does **not** contain
+server-side egress — drive everything by `curl`/API and deliberately stay off the
+SSRF/external-fetch challenges. For any autonomous run, use the VirtualBox VM below.
 
 ```
-docker run -d --rm --name juice-shop --network bb-sandbox -p 127.0.0.1:3000:3000 bkimminich/juice-shop
-
-docker run -d --rm --name webgoat --network bb-sandbox -p 127.0.0.1:8080:8080 -p 127.0.0.1:9090:9090 webgoat/webgoat
+docker run -d --name juice-shop -p 127.0.0.1:3000:3000 bkimminich/juice-shop
+docker run -d --name webgoat  -p 127.0.0.1:8080:8080 -p 127.0.0.1:9090:9090 webgoat/webgoat
 ```
 
-(`-d` runs it in the background so your terminal stays free; `--name` gives the
-preflight's `docker inspect <container>` step something stable to point at — pick
-different names if you already use these.)
+**What this DOES give you:** `-p 127.0.0.1:PORT:PORT` (not bare `-p PORT:PORT`) keeps the
+deliberately-vulnerable app off your LAN — loopback only, not `0.0.0.0`. That part is
+real and worth keeping.
 
-**Why `-p 127.0.0.1:PORT:PORT`** (not bare `-p PORT:PORT`): a bare publish binds
-`0.0.0.0`, which is reachable from anywhere on your LAN — including anyone else on your
-Wi-Fi. Binding to `127.0.0.1` means only processes on this machine can reach it.
-
-**Caveat — read this carefully:** `--internal` blocks *outbound* traffic from the
-container to other networks; it does **not** block the *inbound* published port.
-Docker's port-publishing sets up host-level forwarding independent of the container's
-own routing table, so `http://localhost:3000` still works from your host even though
-the container itself has no way out. That's the intended shape — you (and Claude,
-through the hook) reach the target over loopback; the target cannot reach anything
-else. Don't mistake "I can still browse to it" for "isolation isn't working."
-
-**If `--internal` breaks the image pull:** `docker run --network bb-sandbox <image>`
-will implicitly pull if the image isn't already local, and pulling on the isolated
-network can fail in some Docker Desktop configurations. Fix: pull first on your normal
-network, then run on the internal one.
-
-```
-docker pull bkimminich/juice-shop
-docker pull webgoat/webgoat
-docker network create --internal bb-sandbox
-docker run -d --rm --name juice-shop --network bb-sandbox -p 127.0.0.1:3000:3000 bkimminich/juice-shop
-docker run -d --rm --name webgoat --network bb-sandbox -p 127.0.0.1:8080:8080 -p 127.0.0.1:9090:9090 webgoat/webgoat
-```
-
-### 3. Verify containment yourself before trusting the skill's preflight
-
-```
-docker inspect juice-shop --format "{{.HostConfig.NetworkMode}} {{json .NetworkSettings.Ports}}"
-```
-
-Expect the network mode to name your `bb-sandbox` internal network and the port
-mapping to show `HostIp: "127.0.0.1"` — not `0.0.0.0`, not empty. This is exactly the
-check `bb-sandbox`'s Phase 0 preflight asks you to run and paste back (see
-**Preflight** below).
+**What it CANNOT give you:** an egress lock. `--network internal` would block egress but
+then won't publish the port (target unreachable); a masquerade-off bridge publishes but
+still egresses (both verified live). So the container here **can reach the internet**.
+That is why this is preview-only — and why the skill's `sandbox_preflight` egress probe
+reports `EGRESS_OPEN` and **refuses** an autonomous run against it (intended
+fail-closed behavior). Reset any Docker preview target with `docker restart <name>`.
 
 ---
 
-## Fallback topology — VirtualBox host-only VM
+## Contained topology — VirtualBox host-only VM (recommended for autonomous runs)
 
-Use this only if Docker Desktop isn't installed/usable. Runs the target inside the
-existing Linux VM (per `docs/00-BRIEF.md` A3 / `README.md`'s VirtualBox section),
-reachable from Windows Chrome over a **host-only** adapter — `192.168.56.0/24` by
-default, which VirtualBox does not route to the internet.
+**This is the topology that actually delivers containment** (the Docker preview above
+does not). Runs the target inside the existing Linux VM (per `docs/00-BRIEF.md` A3 /
+`README.md`'s VirtualBox section), reachable from Windows Chrome over a **host-only**
+adapter — `192.168.56.0/24` by default, which VirtualBox does not route to the internet.
 
 ### One-time VM network setup [you, GUI, VM powered off]
 
@@ -156,6 +126,18 @@ docker run -d --rm --name webgoat -p 192.168.56.101:8080:8080 -p 192.168.56.101:
 
 (Replace `192.168.56.101` with whatever `ip addr` actually reports for the host-only
 interface.) From Windows Chrome: `http://192.168.56.101:3000`.
+
+### Verify egress is actually blocked [you, terminal, inside the VM]
+
+Don't trust that isolating Adapter 1 worked — prove it. From inside the VM:
+
+```
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 5 http://1.1.1.1 || echo "EGRESS_BLOCKED (good)"
+```
+
+Expect a failure/timeout (`EGRESS_BLOCKED`). If it returns an HTTP code, Adapter 1 (the
+internet leg) is still attached — disable it before running. This is the `EGRESS_BLOCKED`
+verdict the skill's preflight requires; pass it to `sandbox_preflight(egress_test=...)`.
 
 Note this fallback does **not** give you a `bb-sandbox` scope handle of `localhost` —
 declare the VM's host-only IP as the allow-listed host instead (a single `/32`, never
@@ -209,19 +191,24 @@ yourself first:
    ```
    Confirm they're gone: `Get-ChildItem Env: | Where-Object Name -match 'PROXY'`
    should return nothing.
-2. **Containment must be verified, not assumed.** The skill runs
-   `docker inspect <container> --format '{{.HostConfig.NetworkMode}} {{json .NetworkSettings.Ports}}'`
-   and passes the result to the `sandbox_preflight` MCP tool (`mcp__plugin_bb_bb__sandbox_preflight`,
-   live in `plugin/mcp/server.py`) as `network_mode`/`port_bindings`, which checks it against
-   `network_isolation_verified` before it will start — this is backed by the pure-function
-   checker in `plugin/mcp/sandbox.py` (`network_isolation_check`), which only pattern-matches
-   text you/the skill paste in; per the plugin's no-network-calls invariant, nothing in the
-   MCP server runs `docker` itself.
-   > `sandbox_preflight`'s top-level `ready` is `True` only when EVERY check passes AND
-   > `network_isolation_verified` is specifically `"pass"` — an unconfirmed `"warn"` (no
-   > `docker inspect` output supplied yet) is NOT good enough to run autonomously, even
-   > though it isn't a hard "fail" either. `SKILL.md`'s Phase 0 hard-aborts unless `ready`
-   > is exactly `True`; there is no "check yourself" fallback — call the tool.
+2. **Containment must be verified empirically, not assumed — and not inferred from the
+   network name.** The skill gathers THREE things and passes them to the `sandbox_preflight`
+   MCP tool (`mcp__plugin_bb_bb__sandbox_preflight`, live in `plugin/mcp/server.py`):
+   ```
+   # (a) network mode + port bindings
+   docker inspect <container> --format "{{.HostConfig.NetworkMode}} {{json .NetworkSettings.Ports}}"
+   # (b) an ACTUAL egress probe — a throwaway container on the SAME network must FAIL to reach the internet
+   docker run --rm --network <net> alpine sh -c "wget -T5 -q -O/dev/null http://1.1.1.1 && echo EGRESS_OPEN || echo EGRESS_BLOCKED"
+   ```
+   → `sandbox_preflight(network_mode=..., port_bindings=..., egress_test=...)`. It checks these
+   against `network_isolation_verified` via the pure-function checker in `plugin/mcp/sandbox.py`
+   (`network_isolation_check`), which only pattern-matches text you/the skill paste in; per the
+   plugin's no-network-calls invariant, nothing in the MCP server runs `docker` itself.
+   > `network_isolation_verified` is `"pass"` only when the port bind is `127.0.0.1`-only AND
+   > the egress probe returned `EGRESS_BLOCKED`. An `EGRESS_OPEN` result (the Docker Desktop
+   > case) is a hard fail; an unconfirmed/empty probe is a `"warn"`. `ready` is `True` only when
+   > EVERY check passes AND `network_isolation_verified == "pass"`. `SKILL.md`'s Phase 0
+   > hard-aborts unless `ready` is exactly `True`; there is no "check yourself" fallback.
 3. **Reachability** — `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/`
    returns a live HTTP code.
 4. **Target + allow-list exist** — the skill creates these if missing; see Usage below.
@@ -283,7 +270,7 @@ If the active target isn't `mode=='sandbox'`, `bb-sandbox` refuses to run — it
 | Layer | What it does | What it can't do |
 |---|---|---|
 | **Scope-guard hook** (`plugin/hooks/scope-guard.py`) | Deny-by-default; allow-list is `(host, port)` — mandatory port, no wildcards/CIDR, and loopback-only unconditionally (a non-loopback host is denied even if a scope rule somehow names one); deny-on-ambiguity for anything that hides its target (`$(...)`, decode pipes, `--resolve`, `-x`/`--proxy`, inline proxy vars — checked on Bash AND chrome-tool inputs); **no override** in sandbox mode (`scope_override` cannot clear a sandbox deny); zero-candidate network commands are denied, not deferred. | See inside an approved command — SSRF from the app itself, redirects, harness-internal code, and browser click/dynamically-constructed JS navigation are all outside its view (see "Residual gap" above). |
-| **Network isolation** (`--network internal` + `127.0.0.1` bind, or the VirtualBox host-only/no-internet-route equivalent) | Removes the target's own route off-box, at the OS/network level — this is what actually stops SSRF-turned-outward, regardless of what any tool call looked like. | Nothing — it's not a decision layer, it's a hard wall. It also doesn't replace the hook: without the hook, nothing stops a request that *stays inside* the sandbox from being aimed at, say, another local dev server on a different port. |
+| **Network isolation** (VirtualBox host-only VM with no internet route — **not** Docker Desktop, which can't publish + egress-lock at once; egress is **probe-verified**, never inferred from the network name) | Removes the target's own route off-box, at the OS/network level — this is what actually stops SSRF-turned-outward, regardless of what any tool call looked like. Verified by an actual egress probe at preflight (`EGRESS_BLOCKED`). | Nothing — it's not a decision layer, it's a hard wall. It also doesn't replace the hook: without the hook, nothing stops a request that *stays inside* the sandbox from being aimed at, say, another local dev server on a different port. Docker Desktop can only provide the loopback bind, not the egress lock — preview-only. |
 
 Both layers are required. The hook without network isolation is instruction-following
 with extra steps; network isolation without the hook still lets scoped-looking traffic

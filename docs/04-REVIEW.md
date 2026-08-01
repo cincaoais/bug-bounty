@@ -60,6 +60,13 @@ python -m pytest -q  →  391 passed in 19.77s
 - **Catalog vs live drift.** The scorecard scores against the bundled catalog (113 JS / 107 WebGoat); a challenge present live but absent from the catalog won't score (documented in `juiceshop.md`). Catalogs are current as of 2026-08-01.
 - **Not yet exercised against a real container** — see Phase 7 below.
 
+## Post-review addendum — live-test findings (2026-08-01)
+Standing up a real target surfaced two things no offline test could:
+1. **Docker Desktop can't provide "reachable + egress-locked"** — `--network internal` blocks egress but won't publish `-p` ports (target unreachable); a masquerade-disabled bridge publishes but still egressed (reached `1.1.1.1`). The RND/runbook overclaimed this. **Fix applied (B):** the runbook now names the VirtualBox host-only VM as the contained topology (Docker = preview-only), and `sandbox_preflight` was changed to require an **empirical egress probe** (`EGRESS_BLOCKED`) rather than infer isolation from the network name — an `EGRESS_OPEN` probe is a hard fail. New tests cover it (394 pass). The system's *fail-closed* behavior was correct throughout — it refuses to run against an unconfirmed target.
+2. **New MCP tools + hook matchers need a plugin reinstall + Claude Code restart** to go live (servers load at startup) — the tool-backed run is a fresh-session activity.
+
+**Preview run (reduced containment, hand-driven curl, SSRF challenges avoided):** solved **11/113** Juice Shop challenges (grade D, 645/12980 pts) across Injection / Sensitive Data Exposure / Improper Input Validation, difficulty 1–4, each verified against `/api/Challenges` and scored through the real `mission.py`. Proves the find→exploit→verify→score loop works end-to-end against a live target.
+
 ## Suggested next steps
 1. **The gated live run** (below) — the true end-to-end validation.
 2. WebGoat live pass (harder: per-lesson endpoints, session ordering, WebWolf) after Juice Shop proves out.

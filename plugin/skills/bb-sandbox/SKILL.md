@@ -38,11 +38,14 @@ in step 3 runs BEFORE the first real network action (step 4's reachability curl)
 
 2. **Seed the objective catalog:** `mcp__plugin_bb_bb__seed_objectives(handle, app)`.
 
-3. **Full preflight gate — HARD-ABORT unless `ready` is `True`.** The hook is only the first layer; the real boundary is network isolation (an internet-connected sandbox once led an agent to attack real orgs — see docs/01-RND.md Theme 4/6). Confirm containment yourself, then hand the evidence to the preflight tool — do not "check yourself" as a substitute for calling it:
+3. **Full preflight gate — HARD-ABORT unless `ready` is `True`.** The hook is only the first layer; the real boundary is network isolation (an internet-connected sandbox once led an agent to attack real orgs — see docs/01-RND.md Theme 4/6). Gather THREE pieces of evidence yourself, then hand them to the preflight tool — do not "check yourself" as a substitute for calling it. Note: **the network name is NOT proof of egress-blocking** (Docker Desktop can label a network internal and still egress — see `docs/sandbox-setup.md`), so egress is verified by an actual probe:
    ```
+   # (a) network mode + port bindings
    docker inspect <container> --format '{{.HostConfig.NetworkMode}} {{json .NetworkSettings.Ports}}'
+   # (b) EGRESS PROBE — a throwaway container on the SAME network trying to reach the internet; must FAIL
+   docker run --rm --network <net> alpine sh -c "wget -T5 -q -O/dev/null http://1.1.1.1 && echo EGRESS_OPEN || echo EGRESS_BLOCKED"
    ```
-   Then call `mcp__plugin_bb_bb__sandbox_preflight(network_mode="<NetworkMode from above>", port_bindings="<port output from above>")`. This one call checks proxy env is clear (`HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` unset), the active target is sandbox mode, an allow-list is declared, AND network isolation — all four together. `ready` is only `True` when EVERY check passes AND `network_isolation_verified` is specifically `"pass"` (an unconfirmed `"warn"` is not good enough to run autonomously — it means containment was never actually confirmed). **If `ready` is not `True`, abort** — read each failing/warning check's `detail`, fix it (unset a proxy var; fix the docker network/port binding per `docs/sandbox-setup.md`), and retry. Do not proceed on trust.
+   Then call `mcp__plugin_bb_bb__sandbox_preflight(network_mode="<NetworkMode>", port_bindings="<port output>", egress_test="<EGRESS_BLOCKED or EGRESS_OPEN>")`. This one call checks proxy env is clear (`HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` unset), the active target is sandbox mode, an allow-list is declared, AND network isolation (loopback-only bind + egress **empirically** blocked) — all together. `ready` is only `True` when EVERY check passes AND `network_isolation_verified` is specifically `"pass"` (an unconfirmed `"warn"`, or an `EGRESS_OPEN` probe, is not good enough — on Docker Desktop egress can't be blocked, so use the VirtualBox host-only VM per `docs/sandbox-setup.md`). **If `ready` is not `True`, abort** — read each failing check's `detail`, fix it, and retry. Do not proceed on trust.
 
 4. **Reachability.** `curl -s -o /dev/null -w '%{http_code}' http://localhost:<PORT>/` returns a live code. (Explicit URL — see Command conventions.)
 

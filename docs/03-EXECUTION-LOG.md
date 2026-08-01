@@ -74,8 +74,15 @@ Holistic reviewer found 3 CONFIRMED traffic-escapes (#1 non-loopback rule, #2 sc
 - `scratchpad/adv_verify.py` — planted a malicious `evil.com:443` rule; ALL escapes deny, real localhost allows, shell defers. **ALL PASSED.**
 - Authoritative `python -m pytest -q` → **391 passed**. Bounty-mode unchanged.
 
-**BUILD COMPLETE & VERIFIED (offline). Docs 00–04 written. Nothing committed to git yet.**
-**NEXT = the one hard gate: user permission + a running target for the live Juice Shop run.**
+**BUILD COMPLETE & VERIFIED (offline). Docs 00–04 written.**
+
+## Post-build: git + live preview + containment fix (2026-08-01)
+- **A (ship):** branch `feat/autonomous-sandbox-mode`; commit `35129b7` (docs) + `4bf2feb` (feature, 21 files). `docs/field-notes/` left untracked. Not pushed.
+- **Live preview (reduced containment, Docker):** solved **11/113** Juice Shop challenges, scored through real `mission.py` (645/12980, grade D). Target stopped after.
+- **Live findings:** (1) Docker Desktop can't do reachable+egress-locked (`--internal` won't publish; masquerade-off still egresses) → VM host-only is the real contained topology; (2) new MCP tools/hook need reinstall+restart to go live.
+- **B (fix containment):** `sandbox_preflight` now requires an empirical **egress probe** (`EGRESS_BLOCKED`), not a network-name inference; runbook demotes Docker to preview-only + promotes VM to contained; RND erratum + review addendum added. Authoritative `pytest -q` → **394 passed**.
+
+**NEXT (when user is ready): the fully-contained tool-backed run — VM host-only setup + plugin reinstall + Claude Code restart, then the start prompt in a fresh session.**
 
 ## Notes / deviations
 _(appended as slices return)_

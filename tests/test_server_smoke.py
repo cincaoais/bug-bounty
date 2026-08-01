@@ -248,7 +248,8 @@ def test_sandbox_preflight_all_pass_on_internal_network_and_loopback_bind():
         server.create_target("juicebox", mode="sandbox", sandbox_app="juice-shop")
         server.set_scope_rules("juicebox", [{"pattern": "localhost:3000", "in_scope": True}])
         result = server.sandbox_preflight(network_mode="internal",
-                                          port_bindings="127.0.0.1:3000->3000/tcp")
+                                          port_bindings="127.0.0.1:3000->3000/tcp",
+                                          egress_test="EGRESS_BLOCKED")
         by_name = {c["name"]: c for c in result["checks"]}
         assert by_name["proxy_env"]["status"] == "pass"
         assert by_name["active_target_sandbox"]["status"] == "pass"
@@ -264,6 +265,21 @@ def test_sandbox_preflight_fails_on_0_0_0_0_bind_even_when_internal():
         server.set_scope_rules("juicebox", [{"pattern": "localhost:3000", "in_scope": True}])
         result = server.sandbox_preflight(network_mode="internal",
                                           port_bindings="0.0.0.0:3000->3000/tcp")
+        by_name = {c["name"]: c for c in result["checks"]}
+        assert by_name["network_isolation_verified"]["status"] == "fail"
+        assert result["ready"] is False
+
+
+def test_sandbox_preflight_egress_open_is_not_ready():
+    """The Docker Desktop case: loopback-bound + 'internal'-looking network, but the
+    egress probe shows the container can still reach the internet -> NOT ready."""
+    with tempfile.TemporaryDirectory() as tmp:
+        server = _reload_with_tmp(tmp)
+        server.create_target("juicebox", mode="sandbox", sandbox_app="juice-shop")
+        server.set_scope_rules("juicebox", [{"pattern": "localhost:3000", "in_scope": True}])
+        result = server.sandbox_preflight(network_mode="bb-internal",
+                                          port_bindings="127.0.0.1:3000->3000/tcp",
+                                          egress_test="EGRESS_OPEN")
         by_name = {c["name"]: c for c in result["checks"]}
         assert by_name["network_isolation_verified"]["status"] == "fail"
         assert result["ready"] is False
