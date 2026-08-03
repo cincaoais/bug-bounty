@@ -87,7 +87,9 @@ Holistic reviewer found 3 CONFIRMED traffic-escapes (#1 non-loopback rule, #2 sc
 - **Juice Shop, deeper Docker preview:** **29/113** (was 11), scored via `mission.py` → 1615/12980, grade D. All grounded against `/api/Challenges`; catalog-vs-live drift check clean (0 solved keys missing from catalog).
 - **WebGoat, first live pass:** loop proven (register/login → discover `.lesson` form fields → solve → per-lesson `reportcard.mvc` flip; **HTTP Basics** False→True). Two live oracle findings recorded in `docs/04-REVIEW.md` addendum 2: (1) `numberOfAssignmentsSolved` unreliable (96/96 fresh); (2) oracle is per-lesson while catalog is per-assignment → WebGoat per-assignment scoring needs a lesson↔assignment mapping (deferred build item).
 
-**NEXT (when user is ready): the fully-contained tool-backed run — VM host-only setup + plugin reinstall + Claude Code restart, then the start prompt in a fresh session.**
+- **CONTAINED VM RUN DONE (2026-08-03):** existing Ubuntu 22 VirtualBox VM, NAT cable disconnected + host-only `192.168.56.103` → egress **verified BLOCKED** (`curl 1.1.1.1` → 000 from inside the VM). Juice Shop **31/113** scored via `mission.py` (1675/12980, grade D), driven hand-on from Windows straight at the host-only IP (no SSH tunnel needed for the hand-driven path); +2 vs the Docker preview = XXE `/etc/passwd` read + Outdated Allowlist redirect, now safe to attempt. SSRF/redirect-bypass didn't land (payload/version, not containment). See `docs/04-REVIEW.md` addendum 3.
+
+**NEXT (when user is ready): the *gated tool-backed* run — plugin reinstall + Claude Code restart so the `bb-sandbox` skill + scope-guard hook drive it (not hand-scripts), reached via the SSH loopback tunnel into the same egress-locked VM.**
 
 ## Notes / deviations
 _(appended as slices return)_

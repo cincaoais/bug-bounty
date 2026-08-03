@@ -100,6 +100,28 @@ oracle flips. Demonstrated end-to-end on **HTTP Basics** (False→True, both ass
   score at lesson level from `lessonStatistics`, record assignment-level from POST responses.
 - The skill must ignore `numberOfAssignmentsSolved` and read `lessonStatistics[].solved` only.
 
+## Post-review addendum 3 — first genuinely-contained run (2026-08-03)
+
+The "gated live run" this report kept deferring finally executed against a **real
+egress-locked target** (not the Docker reduced-containment preview). Topology that worked:
+an existing **Ubuntu 22 VirtualBox VM**, Adapter 1 (NAT) cable disconnected + Adapter 2
+(host-only, `192.168.56.103`) → **egress verified BLOCKED** (`curl 1.1.1.1` → `000` from
+inside the VM). Juice Shop + WebGoat run in the VM via Docker; the hunt was driven hand-on
+from Windows straight at `192.168.56.103` — no SSH tunnel needed for the hand-driven path
+(direct host-only IP; the tunnel is only required when the loopback-only hook is enforcing,
+i.e. the gated-skill path).
+
+**Juice Shop, contained: 31/113** scored through `mission.py` (1675/12980, grade D) — **+2
+vs the Docker preview**: XXE `/etc/passwd` read and Outdated Allowlist redirect, both
+outbound-adjacent challenges that were unsafe to attempt without a verified egress lock.
+SSRF and the redirect-allowlist-bypass did NOT solve — payload/version (this build `406`s
+every bypass shape; SSRF needs a version-specific internal key), not a containment gap.
+
+**What this validates:** the full containment topology works end-to-end and the egress wall
+held during a real hunt. **Still pending:** the *tool-backed gated* run — driving through the
+`bb-sandbox` skill + scope-guard hook (not hand-scripts), which needs a plugin reinstall +
+Claude Code restart + the SSH loopback tunnel.
+
 ## Suggested next steps
 1. **The gated live run** (below) — the true end-to-end validation.
 2. WebGoat live pass (harder: per-lesson endpoints, session ordering, WebWolf) after Juice Shop proves out.
