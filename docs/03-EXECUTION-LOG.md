@@ -82,6 +82,11 @@ Holistic reviewer found 3 CONFIRMED traffic-escapes (#1 non-loopback rule, #2 sc
 - **Live findings:** (1) Docker Desktop can't do reachable+egress-locked (`--internal` won't publish; masquerade-off still egresses) → VM host-only is the real contained topology; (2) new MCP tools/hook need reinstall+restart to go live.
 - **B (fix containment):** `sandbox_preflight` now requires an empirical **egress probe** (`EGRESS_BLOCKED`), not a network-name inference; runbook demotes Docker to preview-only + promotes VM to contained; RND erratum + review addendum added. Authoritative `pytest -q` → **394 passed**.
 
+## Session 2026-08-03: doc topology fix + deeper preview + WebGoat pass
+- **Doc topology fix (`c8df283`):** the contained-VM runbook told operators to run the target at its host-only IP and allow-list that IP — which review fix #1's unconditional loopback-only `sandbox_allows` denies (verified live: `sandbox_allows('192.168.56.101',3000,[rule])` → deny). Corrected `sandbox-setup.md` / `sandbox-quickstart.md` to the working topology (container bound to VM-loopback + `ssh -L` tunnel to a host loopback port) + `01-RND.md` ERRATUM 2.
+- **Juice Shop, deeper Docker preview:** **29/113** (was 11), scored via `mission.py` → 1615/12980, grade D. All grounded against `/api/Challenges`; catalog-vs-live drift check clean (0 solved keys missing from catalog).
+- **WebGoat, first live pass:** loop proven (register/login → discover `.lesson` form fields → solve → per-lesson `reportcard.mvc` flip; **HTTP Basics** False→True). Two live oracle findings recorded in `docs/04-REVIEW.md` addendum 2: (1) `numberOfAssignmentsSolved` unreliable (96/96 fresh); (2) oracle is per-lesson while catalog is per-assignment → WebGoat per-assignment scoring needs a lesson↔assignment mapping (deferred build item).
+
 **NEXT (when user is ready): the fully-contained tool-backed run — VM host-only setup + plugin reinstall + Claude Code restart, then the start prompt in a fresh session.**
 
 ## Notes / deviations

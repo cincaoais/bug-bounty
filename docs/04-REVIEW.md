@@ -67,6 +67,39 @@ Standing up a real target surfaced two things no offline test could:
 
 **Preview run (reduced containment, hand-driven curl, SSRF challenges avoided):** solved **11/113** Juice Shop challenges (grade D, 645/12980 pts) across Injection / Sensitive Data Exposure / Improper Input Validation, difficulty 1–4, each verified against `/api/Challenges` and scored through the real `mission.py`. Proves the find→exploit→verify→score loop works end-to-end against a live target.
 
+## Post-review addendum 2 — deeper Docker preview + WebGoat live findings (2026-08-03)
+
+**Juice Shop, second Docker preview (reduced containment, HTTP-only, SSRF/outbound avoided):**
+solved **29/113** (was 11), scored through `mission.py` → 1615/12980, grade D. Difficulty
+spread 1★4 / 2★7 / 3★8 / 4★10 / 5★0 / 6★0; every solve evidence-backed and grounded against
+`GET /api/Challenges`. Confirms the find→exploit→verify→score→AAR loop end-to-end at scale.
+The unsolved remainder is browser-required (XSS, DOM, client routes), hard crypto/brute-force
+(JWT-forge, RSA, TOTP), or the deliberately-avoided SSRF set — expected under Docker's reduced
+containment, not loop failures.
+
+**WebGoat, first live pass — two oracle findings no offline test could surface:**
+1. **`reportcard.mvc`'s `numberOfAssignmentsSolved` is unreliable** — returns `96/96` on a
+   brand-new account (nothing actually solved). Scoring must NOT trust it. The only trustworthy
+   global signal is per-lesson `lessonStatistics[].solved` (38 lessons; exactly the intro
+   "WebGoat" lesson auto-solved at registration = the correct baseline).
+2. **Oracle granularity (per-lesson) ≠ catalog granularity (per-assignment).** The bundled
+   `webgoat-lessons.json` is per-assignment (107 rows); the grounded oracle is per-lesson (38),
+   and a lesson only flips `solved` once ALL its assignments are done. There is no per-assignment
+   progress endpoint (`lessonprogress`/`lessonoverview` both 404). **WebGoat therefore cannot be
+   scored per-assignment the way Juice Shop is** without a lesson↔assignment mapping — a genuine
+   build item, deferred. Note each assignment's own POST response DOES return `lessonCompleted`
+   (server-authoritative at solve time), so the mapping can record assignment solves from those
+   responses and reconcile against the per-lesson oracle.
+
+**Loop proven on WebGoat anyway:** register/login (session cookie) → discover a lesson's form
+fields from its `.lesson` HTML → submit assignment payloads → `lessonCompleted:true` → per-lesson
+oracle flips. Demonstrated end-to-end on **HTTP Basics** (False→True, both assignments).
+
+**Build backlog from this pass:**
+- Add a WebGoat lesson↔assignment mapping + per-lesson multi-assignment solving to `bb-sandbox`;
+  score at lesson level from `lessonStatistics`, record assignment-level from POST responses.
+- The skill must ignore `numberOfAssignmentsSolved` and read `lessonStatistics[].solved` only.
+
 ## Suggested next steps
 1. **The gated live run** (below) — the true end-to-end validation.
 2. WebGoat live pass (harder: per-lesson endpoints, session ordering, WebWolf) after Juice Shop proves out.
