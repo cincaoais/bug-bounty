@@ -88,8 +88,15 @@ fail-closed behavior). Reset any Docker preview target with `docker restart <nam
 
 **This is the topology that actually delivers containment** (the Docker preview above
 does not). Runs the target inside the existing Linux VM (per `docs/00-BRIEF.md` A3 /
-`README.md`'s VirtualBox section), reachable from Windows Chrome over a **host-only**
-adapter — `192.168.56.0/24` by default, which VirtualBox does not route to the internet.
+`README.md`'s VirtualBox section), egress-locked at the VM's network boundary.
+
+> **Reach it over a host loopback tunnel, NOT the VM's host-only IP.** The scope-guard
+> hook is loopback-only and *unconditional*: `sandbox_allows` denies any non-loopback
+> host — `192.168.56.x` included — regardless of any declared rule (see
+> `plugin/mcp/sandbox.py`, the `_LOOPBACK_HOSTS` invariant). So you do **not** allow-list
+> the host-only IP. Instead you bind the container to the VM's own loopback and forward
+> it to a Windows loopback port with SSH; Windows Chrome / Claude Code then talk to
+> `http://localhost:3000` (which the hook allows) while egress stays blocked inside the VM.
 
 ### One-time VM network setup [you, GUI, VM powered off]
 
@@ -116,16 +123,27 @@ docker pull webgoat/webgoat
 Then **isolate**: VirtualBox → **Devices → Network → uncheck "Connect Network Adapter
 1"** (or power off, disable Adapter 1 in Settings, power back on) so the VM has *only*
 the host-only adapter live — no internet route from this point on. Now run the
-containers, bound to the host-only IP so Windows Chrome can reach them and nothing
-else can:
+containers, bound to the **VM's own loopback** (so the hook's loopback rule matches once
+you tunnel in — see the note above):
 
 ```
-docker run -d --rm --name juice-shop -p 192.168.56.101:3000:3000 bkimminich/juice-shop
-docker run -d --rm --name webgoat -p 192.168.56.101:8080:8080 -p 192.168.56.101:9090:9090 webgoat/webgoat
+docker run -d --rm --name juice-shop -p 127.0.0.1:3000:3000 bkimminich/juice-shop
+docker run -d --rm --name webgoat -p 127.0.0.1:8080:8080 -p 127.0.0.1:9090:9090 webgoat/webgoat
 ```
 
-(Replace `192.168.56.101` with whatever `ip addr` actually reports for the host-only
-interface.) From Windows Chrome: `http://192.168.56.101:3000`.
+Then, from **Windows**, open an SSH loopback tunnel to the VM over the host-only adapter
+(replace `192.168.56.101`/`user` with your VM's host-only IP and login; the VM needs
+`sshd` running):
+
+```
+ssh -L 127.0.0.1:3000:127.0.0.1:3000 user@192.168.56.101                                    # Juice Shop
+ssh -L 127.0.0.1:8080:127.0.0.1:8080 -L 127.0.0.1:9090:127.0.0.1:9090 user@192.168.56.101   # WebGoat
+```
+
+Now Windows Chrome / Claude Code reach the target at `http://localhost:3000` — a loopback
+address the hook allows — and every request tunnels into the egress-locked VM. The SSH
+session is host→VM inbound only; it gives the VM no route out, so the target's own
+server-side egress stays blocked.
 
 ### Verify egress is actually blocked [you, terminal, inside the VM]
 
@@ -139,10 +157,11 @@ Expect a failure/timeout (`EGRESS_BLOCKED`). If it returns an HTTP code, Adapter
 internet leg) is still attached — disable it before running. This is the `EGRESS_BLOCKED`
 verdict the skill's preflight requires; pass it to `sandbox_preflight(egress_test=...)`.
 
-Note this fallback does **not** give you a `bb-sandbox` scope handle of `localhost` —
-declare the VM's host-only IP as the allow-listed host instead (a single `/32`, never
-the `/24` — the whole `192.168.56.0/24` includes other VMs and the host itself, which
-must stay out of scope).
+Because you reach the target over a loopback tunnel, the allow-list is the **normal
+loopback triple** — `127.0.0.1:PORT`, `localhost:PORT`, `[::1]:PORT` — exactly as in the
+Docker case (the skill sets these for you). Do **not** try to allow-list the VM's
+host-only IP: the hook denies every non-loopback host unconditionally, so a
+`192.168.56.x` rule would never match and the run couldn't start.
 
 ---
 
@@ -270,7 +289,7 @@ If the active target isn't `mode=='sandbox'`, `bb-sandbox` refuses to run — it
 | Layer | What it does | What it can't do |
 |---|---|---|
 | **Scope-guard hook** (`plugin/hooks/scope-guard.py`) | Deny-by-default; allow-list is `(host, port)` — mandatory port, no wildcards/CIDR, and loopback-only unconditionally (a non-loopback host is denied even if a scope rule somehow names one); deny-on-ambiguity for anything that hides its target (`$(...)`, decode pipes, `--resolve`, `-x`/`--proxy`, inline proxy vars — checked on Bash AND chrome-tool inputs); **no override** in sandbox mode (`scope_override` cannot clear a sandbox deny); zero-candidate network commands are denied, not deferred. | See inside an approved command — SSRF from the app itself, redirects, harness-internal code, and browser click/dynamically-constructed JS navigation are all outside its view (see "Residual gap" above). |
-| **Network isolation** (VirtualBox host-only VM with no internet route — **not** Docker Desktop, which can't publish + egress-lock at once; egress is **probe-verified**, never inferred from the network name) | Removes the target's own route off-box, at the OS/network level — this is what actually stops SSRF-turned-outward, regardless of what any tool call looked like. Verified by an actual egress probe at preflight (`EGRESS_BLOCKED`). | Nothing — it's not a decision layer, it's a hard wall. It also doesn't replace the hook: without the hook, nothing stops a request that *stays inside* the sandbox from being aimed at, say, another local dev server on a different port. Docker Desktop can only provide the loopback bind, not the egress lock — preview-only. |
+| **Network isolation** (VirtualBox host-only VM with no internet route, reached via a host-loopback SSH tunnel — **not** Docker Desktop, which can't publish + egress-lock at once; egress is **probe-verified**, never inferred from the network name) | Removes the target's own route off-box, at the OS/network level — this is what actually stops SSRF-turned-outward, regardless of what any tool call looked like. Verified by an actual egress probe at preflight (`EGRESS_BLOCKED`). | Nothing — it's not a decision layer, it's a hard wall. It also doesn't replace the hook: without the hook, nothing stops a request that *stays inside* the sandbox from being aimed at, say, another local dev server on a different port. Docker Desktop can only provide the loopback bind, not the egress lock — preview-only. |
 
 Both layers are required. The hook without network isolation is instruction-following
 with extra steps; network isolation without the hook still lets scoped-looking traffic

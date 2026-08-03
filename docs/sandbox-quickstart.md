@@ -66,9 +66,9 @@ _If `/plugin` errors on your version_, use the deterministic fallback in
 Full steps in [`docs/sandbox-setup.md`](sandbox-setup.md) → "Contained topology". In short:
 1. VM: Adapter 1 = NAT (to pull images), Adapter 2 = Host-only (`vboxnet0`).
 2. Inside the VM, pull the image, then **disable Adapter 1** so there's no internet route.
-3. Run bound to the host-only IP: `docker run -d --name juice-shop -p <VM_HOSTONLY_IP>:3000:3000 bkimminich/juice-shop`.
+3. Run bound to the **VM's own loopback**: `docker run -d --name juice-shop -p 127.0.0.1:3000:3000 bkimminich/juice-shop`.
 4. **Verify egress is blocked** from inside the VM: `curl --max-time 5 http://1.1.1.1 || echo EGRESS_BLOCKED`.
-5. Reach it from your host at `http://<VM_HOSTONLY_IP>:3000`; declare that IP:port as the allow-list.
+5. From Windows, tunnel it to a host loopback port: `ssh -L 127.0.0.1:3000:127.0.0.1:3000 user@<VM_HOSTONLY_IP>`. Reach it at `http://localhost:3000` and declare the normal loopback allow-list (`127.0.0.1:3000`/`localhost:3000`/`[::1]:3000`) — **not** the host-only IP, which the loopback-only hook denies.
 
 ### 4B. Preview only — Docker Desktop (NOT egress-locked)
 Docker Desktop can't publish a port AND block egress at once (verified). Use only for a
@@ -102,5 +102,5 @@ an after-action report. WebGoat is the same shape with `sandbox_app="webgoat"` o
 | clone + checkout | `git clone … && git checkout feat/autonomous-sandbox-mode` |
 | install plugin | `/plugin marketplace add <REPO>` → `/plugin install bb` → **restart** |
 | verify | `sandbox_preflight` tool exists; wrong-port curl denied |
-| target (contained) | VirtualBox host-only VM, egress verified blocked |
+| target (contained) | VirtualBox VM (container bound to VM-loopback) + `ssh -L` tunnel to host loopback; egress verified blocked |
 | run | "find bugs in Juice Shop at http://localhost:3000" |
