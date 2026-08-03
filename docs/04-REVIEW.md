@@ -122,6 +122,40 @@ held during a real hunt. **Still pending:** the *tool-backed gated* run — driv
 `bb-sandbox` skill + scope-guard hook (not hand-scripts), which needs a plugin reinstall +
 Claude Code restart + the SSH loopback tunnel.
 
+## Post-review addendum 4 — final contained HTTP coverage (2026-08-03)
+
+Pushed the contained VM run (`192.168.56.103`, egress-locked) to its practical HTTP ceiling:
+**45/113 solved, 2710/12980 pts, grade D (20.9%)** — all grounded against `/api/Challenges`,
+scored through `mission.py`. Difficulty spread 1★6 / 2★8 / 3★17 / 4★12 / 5★2 / 6★0.
+
+**Real-world bug-class coverage (the point, not the raw count):** the solves cover essentially
+every common HTTP-reachable class — SQL injection (auth bypass, UNION extraction, injected auth
+rows), NoSQL manipulation, broken access control / IDOR (basket access+manipulation, product
+tampering, forged feedback/review, five-star deletion), broken auth (weak creds, security-question
+resets, ghost/deleted-user login, OAuth password, change-password abuse), JWT `alg:none` forge,
+XXE file read, file-upload type/size, open redirect, mass-assignment privesc, sensitive-data
+exposure (backups, `/ftp`, `/metrics`, `security.txt`), business logic (negative-price order,
+CAPTCHA reuse, deluxe fraud).
+
+**The 72 unsolved, by root cause:**
+- **Browser-needed (15):** the XSS family + client-side routes. Attempted via the Claude-in-Chrome
+  driver — it reached and loaded the target and ran page JS, but Juice Shop's `javascript:` iframe
+  payloads put the Chrome frame into a persistent error state and destabilized the automation harness
+  (the documented modal/frame hazard). XSS stayed 0/9 — an automation-harness limit, not a
+  "can't test XSS" limit; a human solves them by hand in seconds. Bonus-Payload XSS additionally
+  needs an external SoundCloud URL, which the contained VM blocks by design.
+- **Hard/advanced (27):** RCE/SSTi/XXE-DoS/Memory-Bomb, RS256 JWT forge, SSRF (this build `406`s the
+  redirect-allowlist bypass and needs a version-specific SSRF key), LFR/file-write, supply-chain/
+  typosquatting, 2FA, brute-force/OSINT password resets. Real but specialist 5-6★.
+- **Not bounty-relevant (17):** web3/NFT/wallet, crypto puzzles, chatbot prompt-injection,
+  geo-stalking OSINT, steganography — CTF-flavored, deliberately skipped.
+- **HTTP-reachable remainder (small tail):** NoSQL order-exfil resisted every `$where` payload in
+  this build; exposed-credentials isn't a simple pair in the bundle — skipped after a fair attempt.
+
+**Bottom line:** for "the common bugs you'd hit on a real program," coverage is strong; the one
+material gap is XSS, which needs a stable browser path (the automation harness fought the
+frame-breaking payloads).
+
 ## Suggested next steps
 1. **The gated live run** (below) — the true end-to-end validation.
 2. WebGoat live pass (harder: per-lesson endpoints, session ordering, WebWolf) after Juice Shop proves out.
