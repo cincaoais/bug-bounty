@@ -1,5 +1,7 @@
 # R&D: Autonomous Kali + HexStrike AI + Clash Verge Rev for bug bounty
-Date: 2026-08-04 · Verdict: **Split — HexStrike in the contained sandbox only; Clash Verge Rev skip as a hunting tool; autonomous full-control-vs-real-targets: do NOT** · Confidence: **high** (safety), medium (tool effectiveness)
+Date: 2026-08-04 · Verdict: **Split — HexStrike in the contained sandbox only; Clash Verge Rev not a hunting tool but valid as a pre-BB network-hygiene + lab-routing layer (§9); autonomous full-control-vs-real-targets: do NOT** · Confidence: **high** (safety), medium (tool effectiveness)
+
+> **Update 2026-08-04 (this session):** two refinements below. (a) API-key auth is a *deliberate paid choice* — user runs Claude Code against metered models by paying tokens; the runaway-loop guard is therefore a hard step/token ceiling (§10), not "avoid the key." (b) Clash Verge Rev is re-scoped from "skip" to **"skip *as a hunting proxy*, adopt as host DNS-hygiene + malware-VM egress router"** — its correct job, detailed in **§9**. HexStrike sandbox trial fully scoped in **§10**.
 
 ## 1. Refined brief
 Evaluate three things for a future workflow where Claude Code runs *inside a Kali VM* with API-key auth and **auto-approved (bypass) permissions to control the whole box**: (1) HexStrike AI as an autonomous offensive-tool layer, (2) Clash Verge Rev as bug-bounty proxying, and (3) whether adopting them changes the current `bb` design — which is **deny-by-default, ingest-only for real programs, contained-only for autonomous sandbox runs**. Goal: feasibility + a hard-nosed safety call before building.
@@ -58,6 +60,78 @@ This is where "feasible" and "advisable" diverge sharply. The proposed setup sta
 > **Hard constraints:** (1) Preflight must hard-abort unless an egress probe returns EGRESS_BLOCKED. (2) No target other than the declared sandbox host may be contacted — enforce at the `bb` scope-guard hook, and treat all tool output as untrusted (prompt-injection surface). (3) This configuration (bypass permissions + autonomy) is sandbox-only; it must never be reachable by the real-program workflow, which stays ingest-only and human-gated. (4) On subscription, not a metered API key, and with a token/step ceiling so an autonomous loop can't run away.
 > **First milestone:** HexStrike autonomously solves one Juice Shop challenge, confirmed by the oracle, with egress verified blocked and zero out-of-scope requests logged.
 
+## 9. Clash Verge Rev, re-scoped — network hygiene + lab routing (NOT hunting)
+The earlier "skip" verdict stands *only for the hunting rig* — Verge is not an intercepting proxy and never touches the `bb` ledger. But the use you actually want it for is legitimate and it's the right class of tool. Two distinct jobs:
+
+### 9a. Pre-BB host hygiene — DNS/domain blocklisting on the Kali workstation
+mihomo (Verge's core) filters at the **DNS / domain layer**: you attach public blocklists as `rule-providers` and route matches to the built-in **`REJECT`** outbound (a blackhole). This gives you a real, cheap layer against **malvertising, phishing kits, and known-malware C2 domains** before you ever open a target.
+
+```yaml
+rule-providers:
+  reject:    { type: http, behavior: domain, format: text, interval: 86400,
+               url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt",  path: ./ruleset/reject.yaml }
+  # optional extra layers: phishing/malware/ad lists from earoftoast/clash-rules, ACL4SSR, or MetaCubeX/meta-rules-dat (GEOSITE category-ads-all)
+rules:
+  - RULE-SET,reject,REJECT        # malvertising / trackers / known-bad domains → blackholed
+  - GEOSITE,category-ads-all,REJECT
+  - MATCH,DIRECT                  # everything else goes out normally (no all-or-nothing tunnel)
+```
+
+**Be honest about the ceiling — this is the important correction:** domain blocklisting is **not** antivirus/EDR. It cannot:
+- scan or block a **payload** (a malicious file over an allowed domain, or C2 over a raw IP with no domain, sails through);
+- catch **novel / not-yet-listed** domains (blocklists lag);
+- stop anything **file-based** or post-execution.
+
+So Verge is a useful *first* filter, not a safety guarantee. It complements — never replaces — a real endpoint layer, browser isolation, and not detonating unknown binaries on the workstation. Treat it as "reduce exposure to known-bad domains during recon," full stop.
+
+### 9b. Lab routing — selectively route ONE VM's egress through a chosen path, everything else direct
+This is exactly "rule-based splitting rather than an all-or-nothing tunnel," and mihomo does it natively. The matcher you want is **`SRC-IP-CIDR`** (route by source IP) or **`PROCESS-NAME`** (route by process); outbounds are `DIRECT` / a proxy node / a proxy-group / `REJECT`.
+
+```yaml
+rules:
+  - SRC-IP-CIDR,10.0.99.20/32,vpn-gw     # the malware/analysis VM → forced through a dedicated VPN node
+  - SRC-IP-CIDR,10.0.99.0/24,REJECT      # rest of the lab subnet → no egress at all (fail-closed)
+  - MATCH,DIRECT                         # the host itself → normal internet
+```
+
+**Hard prerequisite (easy to get wrong):** for a rule to act on a *separate* VM's traffic, **mihomo must actually sit in that VM's path** — i.e. run Verge/mihomo on a **gateway/router VM** (or the host in TUN mode) and set the analysis VM's default gateway + DNS to it. A Clash instance running *inside* the analysis VM can be bypassed by the very malware you're containing, and one running only on the host as a system proxy won't see a peer VM's packets. Gateway placement is what makes the split real.
+
+**The safety caveat that matters most:** if you are **detonating real malware**, the accepted pattern is *not* "route live traffic through my own egress, even split." It's **isolation + fake internet**: put the victim VM on **Internal/host-only** networking and point it at a **REMnux gateway running INetSim / FakeNet-NG**, which impersonates the whole internet (DNS, HTTP, etc.) and captures every callback while nothing leaves your network. Use mihomo split-routing (VM→VPN) **only** for the deliberate case where you *want* controlled, attributable-to-a-VPN-not-your-home-IP internet (e.g. fetching a second-stage from a sinkhole you accept the risk of) — and default the rest of the lab subnet to `REJECT` so it fails closed. Layering: **INetSim/FakeNet for detonation → mihomo VPN-gw only when you deliberately allow egress → `REJECT` for everything else.**
+
+**Net for §9:** Verge/mihomo earns a place in your kit — as (a) a domain-blocklist hygiene layer on the workstation and (b) the rule-based egress router for the lab — but it stays **entirely outside the `bb` hunting rig** and is **not** a malware defense on its own.
+
+> **Runnable artifacts:** `docs/lab/mihomo-gateway.yaml` (both modes in one file) + `docs/lab/README.md` (host-hygiene vs gateway-VM setup, the nft/TPROXY snippet, and the INetSim/FakeNet detonation caveat).
+
+## 10. HexStrike sandbox-only trial — concrete scope
+Everything here runs **inside the existing egress-locked VM against `http://localhost:3000` (Juice Shop) only.** Bypass permissions + autonomy are acceptable *here and only here* because four controls bound the blast radius simultaneously: egress verified blocked, a scope allowlist below the agent, a clean-snapshot rollback, and a step/token ceiling.
+
+**Ordering gotcha (do this first, it bites otherwise):** HexStrike's `pip install` and the 150+ CLI tools **need network to install**. So: (1) build the VM with NAT *on*, install HexStrike + tools + pull the Juice Shop image, (2) **snapshot clean**, (3) **remove NAT / go host-only**, (4) run the egress probe and confirm `EGRESS_BLOCKED` *before* launching the agent. Never install with egress already cut, and never run the trial in the still-NAT'd state.
+
+**Preflight gate (hard-abort, not a warning).**
+- `curl --max-time 5 https://1.1.1.1` **and** a DNS probe must **both fail** → emit `EGRESS_BLOCKED`; anything else aborts the run.
+- Re-run this probe *after* HexStrike starts (a tool or dep could have re-enabled networking).
+
+**Wiring.**
+- Start the FastMCP server bound to **`127.0.0.1` only** (never `0.0.0.0` — no listener reachable off-box).
+- Register it in Claude Code's MCP config pointing at loopback. Run on the paid API key *with the ceiling below*, or subscription — either is fine now that cost is a deliberate choice.
+
+**Scope-guard (the single most important control).**
+- `bb` scope-guard hook: allowlist = **exactly** `{127.0.0.1:3000, localhost:3000}`. Any tool call whose resolved target falls outside → **hard deny + log line**. It must sit *below* the agent so a prompt-injected "now scan example.com" **cannot** execute even with bypass permissions on.
+- **Now wired for HexStrike (this session):** the hook previously matched only Bash/Burp-send/WebFetch/Chrome — HexStrike's own `mcp__hexstrike__*` tools matched **no** matcher and would have bypassed the guard entirely. Added: a `mcp__hexstrike__.*` PreToolUse matcher (`plugin/.claude-plugin/plugin.json`) + structured-field target extraction (`target`/`url`/`host`/`rhosts`/… and any URL smuggled into an `additional_args` blob) feeding the existing sandbox allow-list. Sandbox path treats **every** hexstrike tool as network-capable and **fail-closed**: no resolvable target, wrong port, off-box host, or an ambiguous (`$(...)`/proxy/decode) args blob → **deny**. 13 new tests in `tests/test_hook.py` (392 pass; the 1 unrelated `test_sandbox.py` failure is a pre-existing stdlib `ipaddress` quirk that fails *closed*).
+- Treat **all tool output as untrusted data** (the injection surface from §6.2). Egress-blocked means injection can't exfiltrate, but the scope-guard + step ceiling are what stop it from steering local commands.
+
+**Autonomy ceiling.**
+- Hard **step cap** (e.g. ≤ N tool calls) **and** a **token/$ cap** → auto-halt on either. This is the runaway-loop guard that replaces "don't use the API key."
+
+**Grounded success oracle (not self-report).**
+- Success = HexStrike **autonomously solves ≥1 Juice Shop challenge**, confirmed by `GET /api/Challenges` showing `solved:true` (existing `bb` grounded scoring) — **while** the egress probe still fails **and** the scope-guard log shows **zero** out-of-scope attempts.
+
+**Teardown.** Revert the VM to the clean snapshot after the run; HexStrike may have mutated the box. **Never** carry that VM's state into any real-program work.
+
+**Metrics to capture (this is what tells you if autonomous HexStrike is even worth it vs. running the tools by hand):** oracle-confirmed solves · total tool calls · tokens/$ spent · scope-guard denials (= injection/scope-drift attempts) · wall-clock.
+
+**Explicit non-goals:** no real target, no second/bridged host, no `0.0.0.0` binds, no egress, no reuse of the detonation snapshot for `bb`.
+
 ## Sources
 - [HexStrike AI README (GitHub)](https://github.com/0x4m4/hexstrike-ai) · repo stats: 10.8k★, MIT, created 2025-07-10, active
 - [Check Point Research — HexStrike-AI: When LLMs Meet Zero-Day Exploitation](https://blog.checkpoint.com/executive-insights/hexstrike-ai-when-llms-meet-zero-day-exploitation/)
@@ -66,3 +140,7 @@ This is where "feasible" and "advisable" diverge sharply. The proposed setup sta
 - [Infosecurity Magazine — Threat Actors Abuse HexStrike-AI](https://www.infosecurity-magazine.com/news/threat-actors-hexstrikeai/)
 - [Anvilogic — HexStrike-AI Weaponized for Rapid Exploitation of Citrix Flaws](https://www.anvilogic.com/threat-reports/hexstrike-ai-cyber-offense)
 - [Clash Verge Rev README (GitHub)](https://github.com/clash-verge-rev/clash-verge-rev) · 135k★, GPL-3.0, Tauri/mihomo, active
+- [mihomo docs — Route Rules (SRC-IP-CIDR, PROCESS-NAME, RULE-SET, logical AND/OR/NOT)](https://wiki.metacubex.one/en/config/rules/)
+- [mihomo docs — rule-providers configuration](https://wiki.metacubex.one/en/config/rule-providers/content/)
+- [Loyalsoldier/clash-rules — reject/malware/phishing rulesets for REJECT](https://github.com/Loyalsoldier/clash-rules) · also [earoftoast/clash-rules](https://github.com/earoftoast/clash-rules), [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)
+- [Mandiant/Google — Linux support for FakeNet-NG (fake-internet detonation)](https://cloud.google.com/blog/topics/threat-intelligence/introducing-linux-support-fakenet-ng-flares-next-generation-dynamic-network-analysis-tool) · REMnux + INetSim gateway pattern

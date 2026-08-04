@@ -28,6 +28,12 @@
         "hooks": [
           { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
         ]
+      },
+      {
+        "matcher": "mcp__hexstrike__.*",
+        "hooks": [
+          { "type": "command", "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-guard.py\"" }
+        ]
       }
     ],
     "SessionStart": [

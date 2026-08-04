@@ -603,6 +603,142 @@ def test_main_emits_session_start_output_for_sandbox_target(monkeypatch, capsys)
         assert "sandbox" in captured.out.lower()
 
 
+# -- HexStrike AI MCP tools (mcp__hexstrike__*) ---------------------------------
+#
+# HexStrike carries its destination in a STRUCTURED argument, not a shell string,
+# and its own MCP tools (mcp__hexstrike__*) previously matched NO PreToolUse
+# matcher at all -> they bypassed the guard entirely. These assert the wiring:
+# structured-field extraction (real-program scope), and the sandbox path that
+# treats every hexstrike tool as network-capable + fail-closed.
+
+# ---- real-program (bounty) scope: structured-field extraction ----
+
+def test_hexstrike_extract_target_field():
+    got = hook.extract_targets("mcp__hexstrike__nmap_scan", {"target": "scanme.example.com"})
+    hosts = {h for h, _, _ in got}
+    assert "scanme.example.com" in hosts
+
+
+def test_hexstrike_extract_url_field_with_port():
+    got = hook.extract_targets("mcp__hexstrike__nuclei_scan",
+                               {"url": "https://api.example.com:8443/v1"})
+    assert ("api.example.com", 8443, "/v1") in got
+
+
+def test_hexstrike_extract_multi_host_rhosts_field():
+    """hydra-style rhosts holds several space/comma-separated hosts; each must
+    surface, not just the first."""
+    got = hook.extract_targets("mcp__hexstrike__hydra",
+                               {"rhosts": "10.0.0.1, 10.0.0.2 10.0.0.3"})
+    hosts = {h for h, _, _ in got}
+    assert {"10.0.0.1", "10.0.0.2", "10.0.0.3"} <= hosts
+
+
+def test_hexstrike_extract_target_smuggled_in_args_blob():
+    """A URL hidden in a free-form flag string is still caught by the embedded
+    URL scan, so it can't slip past the real-program scope check."""
+    got = hook.extract_targets("mcp__hexstrike__generic",
+                               {"additional_args": "-u http://evil.example.com/x --rate 50"})
+    hosts = {h for h, _, _ in got}
+    assert "evil.example.com" in hosts
+
+
+def test_hexstrike_bounty_deny_out_of_scope():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "mcp__hexstrike__nmap_scan",
+                           "tool_input": {"target": "evil.com"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+
+
+def test_hexstrike_bounty_allow_in_scope_defers():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "mcp__hexstrike__nuclei_scan",
+                           "tool_input": {"url": "https://api.acme.com/v1"}})
+        assert out is None  # in scope -> defer to normal flow
+
+
+# ---- sandbox path: allow only localhost:3000, fail-closed otherwise ----
+
+def test_hexstrike_sandbox_allow_schemed_target():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "mcp__hexstrike__nuclei_scan",
+                           "tool_input": {"url": "http://localhost:3000/rest/products"}})
+        assert out is not None and out["permissionDecision"] == "allow"
+
+
+def test_hexstrike_sandbox_allow_schemeless_loopback_target():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "mcp__hexstrike__ffuf",
+                           "tool_input": {"target": "127.0.0.1:3000"}})
+        assert out is not None and out["permissionDecision"] == "allow"
+
+
+def test_hexstrike_sandbox_deny_wrong_port():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "mcp__hexstrike__nmap_scan",
+                           "tool_input": {"target": "localhost:9999"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+        assert "9999" in out["permissionDecisionReason"]
+
+
+def test_hexstrike_sandbox_deny_offbox_host():
+    """The exact prompt-injection risk: tool output steers the agent to point a
+    hexstrike tool at a real host. The guard denies it regardless of bypass
+    permissions, because it runs below the model."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "mcp__hexstrike__nmap_scan",
+                           "tool_input": {"target": "scanme.nmap.org"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+
+
+def test_hexstrike_sandbox_deny_second_port_in_multi_target():
+    """(host,port)-keyed extraction: two ports on the sandbox host must BOTH be
+    evaluated; the out-of-list one denies the whole call."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "mcp__hexstrike__hydra",
+                           "tool_input": {"rhosts": "localhost:3000 localhost:9999"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+        assert "9999" in out["permissionDecisionReason"]
+
+
+def test_hexstrike_sandbox_deny_zero_candidate_fail_closed():
+    """A hexstrike tool with no resolvable target is DENIED, not deferred — an
+    unreadable destination is not a safe default in sandbox mode."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "mcp__hexstrike__list_tools",
+                           "tool_input": {}})
+        assert out is not None and out["permissionDecision"] == "deny"
+
+
+def test_hexstrike_sandbox_deny_ambiguous_args():
+    """$(...)/proxy/decode shapes hidden in a hexstrike args blob deny outright,
+    same as for Bash/chrome."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "mcp__hexstrike__generic",
+                           "tool_input": {"target": "localhost:3000",
+                                          "additional_args": "-x $(cat /tmp/proxy)"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+
+
+def test_hexstrike_sandbox_decision_writes_audit_row():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        hook.decide({"tool_name": "mcp__hexstrike__nuclei_scan",
+                     "tool_input": {"url": "http://localhost:3000/x"}})
+        rows = _audit_rows()
+        assert rows[-1]["decision"] == "allow"
+        assert rows[-1]["host"] == "localhost" and rows[-1]["port"] == 3000
+
+
 # -- regression: bounty-mode decisions are byte-for-byte unchanged --------------
 #
 # Every pre-existing test above this section already asserts real-program

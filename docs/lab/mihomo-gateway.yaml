@@ -1,0 +1,123 @@
+# =============================================================================
+# mihomo (Clash.Meta) config — bug-bounty lab
+# Companion to docs/field-notes/rnd-autonomous-kali-hexstrike-2026-08-04.md §9
+#
+# TWO deployment modes share this one file — pick with the `tun:` / `tproxy-port`
+# switches noted inline, and see docs/lab/README.md:
+#   A) HOST HYGIENE  — run on the Kali workstation; TUN on; §9a blocklists apply
+#                      to the whole box. Ignore the SRC-IP-CIDR lab rules.
+#   B) GATEWAY VM    — run on a dedicated router VM; TUN off, tproxy-port on,
+#                      allow-lan on; the analysis VM points its default gateway
+#                      + DNS here. This is what makes §9b split-routing REAL —
+#                      a Clash instance INSIDE the analysis VM can be bypassed by
+#                      the very malware it is meant to contain.
+#
+# HARD LIMITS (do not forget — see §9a): this filters at the DNS/domain layer
+# only. It is NOT antivirus/EDR. It cannot scan a payload, catch raw-IP C2, or
+# stop a not-yet-listed domain. First filter, never a guarantee.
+# =============================================================================
+
+mixed-port: 7890
+allow-lan: true              # mode B REQUIRES this (accept the analysis VM's traffic)
+bind-address: '*'
+mode: rule
+log-level: info
+ipv6: false
+unified-delay: true
+tcp-concurrent: true
+find-process-mode: strict    # enables PROCESS-NAME rules (host-hygiene mode)
+external-controller: 127.0.0.1:9090   # loopback ONLY — never expose the admin API to the lab LAN
+# secret: "set-a-strong-secret-if-you-ever-bind-this-off-loopback"
+
+# ---- DNS: fake-ip so domain rules (RULE-SET / GEOSITE) match reliably --------
+# In gateway mode the analysis VM uses THIS box as its resolver, so every lookup
+# passes the blocklists below before the VM ever gets an IP.
+dns:
+  enable: true
+  listen: 0.0.0.0:53         # gateway mode answers the lab subnet; use 127.0.0.1:53 for host-only
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - '*.local'
+    - 'time.*.com'
+  default-nameserver:
+    - 1.1.1.1
+    - 223.5.5.5
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+
+# ---- TUN: ONLY for mode A (host hygiene, workstation-wide). ------------------
+# Mode B (gateway VM) leaves this DISABLED and uses tproxy-port + the nft/iptables
+# rules in docs/lab/README.md to capture FORWARDED traffic from the analysis VM.
+tun:
+  enable: false              # <-- set true ONLY in mode A
+  stack: system
+  auto-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+
+# Mode B: uncomment to TPROXY-redirect forwarded traffic (see README nft rules).
+# tproxy-port: 7893
+
+# ---- Egress path the analysis/malware VM is FORCED through -------------------
+# Replace the provider URL with your VPN/WireGuard subscription, OR define a
+# literal node under `proxies:`. The point of §9b: attributable to a VPN, never
+# your home IP.
+proxy-providers:
+  vpn:
+    type: http
+    url: "https://YOUR_PROVIDER/subscription"   # <-- REPLACE
+    interval: 86400
+    path: ./providers/vpn.yaml
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+
+proxies: []   # or a literal WireGuard/Trojan/SS node instead of a provider
+
+proxy-groups:
+  - name: vpn-gw
+    type: url-test           # auto-pick the fastest healthy node
+    use:
+      - vpn
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+
+# ---- Domain blocklists: malvertising / phishing / known-malware C2 ----------
+rule-providers:
+  reject:
+    type: http
+    behavior: domain
+    format: text
+    interval: 86400
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/reject.txt
+
+rules:
+  # 1) HYGIENE (§9a) — blackhole known-bad domains for EVERY client on this box.
+  - RULE-SET,reject,REJECT
+  - GEOSITE,category-ads-all,REJECT
+  #    NOTE: these sit ABOVE the lab-split rules, so the analysis VM is *also*
+  #    protected from known-bad domains. If you instead want to OBSERVE the
+  #    malware reaching its C2 (detonation study), move rule 2 ABOVE these two
+  #    — or, better, do detonation on an INetSim/FakeNet gateway (§9b caveat),
+  #    not through live egress at all.
+
+  # 2) LAB SPLIT (§9b) — the analysis/malware VM (one IP) egresses ONLY via VPN.
+  #    "rule-based splitting, not an all-or-nothing tunnel": just this source.
+  - SRC-IP-CIDR,10.0.99.20/32,vpn-gw
+
+  # 3) FAIL-CLOSED — the rest of the lab subnet gets NO internet at all.
+  - SRC-IP-CIDR,10.0.99.0/24,REJECT
+
+  # 4) Host-hygiene mode: route a named process through the VPN instead of the
+  #    whole box (example; harmless in gateway mode where the process is remote).
+  # - PROCESS-NAME,firefox,vpn-gw
+
+  # 5) The gateway/workstation's OWN traffic (updates, health checks): direct.
+  - MATCH,DIRECT

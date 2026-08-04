@@ -69,6 +69,21 @@ _NET_PRESENT = re.compile(
     r"(?i)(?:^|[\s/\\|&;`(])(" + "|".join(sorted(_NET_TOOLS)) + r")(?:\s|$)")
 _STRIP = "'\"`(),;|&<>"
 
+# HexStrike AI (mcp__hexstrike__*) exposes 150+ offensive tools as MCP calls.
+# Unlike Bash, the destination is NOT a shell string — it rides in a structured
+# argument (nmap→target, nuclei→url, sqlmap→url, hydra→target, ...). We read
+# those fields authoritatively (the same pattern as the Burp send-tools) and
+# also scan any free-form *_args blob for an embedded URL/host, so a target
+# smuggled into `additional_args="-u http://evil"` is still seen. A field may
+# hold several space/comma-separated hosts (hydra rhosts, an nmap range list),
+# so each field value is re-tokenised. Sandbox mode goes further: it treats
+# EVERY hexstrike tool as network-capable and fail-closed (see _decide_sandbox).
+_HEXSTRIKE_TARGET_FIELDS = (
+    "target", "target_url", "url", "host", "hostname", "domain",
+    "ip", "ip_address", "base_url", "rhost", "rhosts",
+)
+_HEXSTRIKE_FIELD_SPLIT = re.compile(r"[\s,]+")
+
 
 def extract_targets(tool_name: str, tool_input: dict) -> list[tuple[str, int | None, str | None]]:
     """Return [(host, port, path_or_None)] candidates found in the tool input.
@@ -97,6 +112,37 @@ def extract_targets(tool_name: str, tool_input: dict) -> list[tuple[str, int | N
             host = str(h).split(":", 1)[0].strip().rstrip(".").lower()
             port = _as_port(tool_input.get("targetPort"))
             return [(host, port, None)] if host else []
+
+    # HexStrike MCP tools: authoritative structured-field extraction (mirrors the
+    # Burp branch above). Dedup by host (first port+path wins) to match this
+    # function's contract; the sandbox path uses a (host,port)-keyed extractor
+    # instead so two ports on one host can't collapse. Falls through to generic
+    # extraction only if NOTHING is found in the known fields or an embedded URL.
+    if tool_name.startswith("mcp__hexstrike__") and isinstance(tool_input, dict):
+        hs: dict[str, tuple[int | None, str | None]] = {}
+        for field in _HEXSTRIKE_TARGET_FIELDS:
+            value = tool_input.get(field)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            for tok in _HEXSTRIKE_FIELD_SPLIT.split(value.strip()):
+                if not tok:
+                    continue
+                if "://" in tok:
+                    host, port, path = _split_url(tok)
+                else:
+                    host, port = _split_bare_hostport(tok)
+                    path = None
+                if host:
+                    hs.setdefault(host, (port, path))
+        for m in URL_RE.finditer(_stringify(tool_input)):
+            host, port, path = _split_url(m.group(0))
+            if host:
+                hs.setdefault(host, (port, path))
+        if hs:
+            return [(host, port, path) for host, (port, path) in hs.items()]
+        # nothing recognisable — return empty; the real-program path treats this
+        # as a non-network action (defer), and the sandbox path fail-closes it.
+        return []
 
     # Scan the RAW command for Bash (so tokenisation and the network-context
     # check see real shell tokens, not JSON-quoted ones). Other tools: stringify.
@@ -328,6 +374,59 @@ def _extract_sandbox_candidates(tool_name: str, tool_input: dict) -> list[tuple[
     return out
 
 
+def _extract_hexstrike_candidates(tool_input: dict) -> list[tuple[str, int | None]]:
+    """Sandbox-only (host, port) extraction for hexstrike MCP tools, keyed by
+    the PAIR (not host alone — same reason as _extract_sandbox_candidates):
+    reads the known target fields, folds every host through `canonical_host`
+    so an unusual loopback spelling can't slip a rule, then scans the whole
+    stringified input for embedded scheme'd URLs and bare loopback host:port
+    tokens (a target hidden in `additional_args`). Returns [] when no target
+    is resolvable — which the caller treats as a fail-closed DENY, never a
+    defer."""
+    seen: set[tuple[str, int | None]] = set()
+    out: list[tuple[str, int | None]] = []
+
+    def _add(host: str | None, port: int | None) -> None:
+        if not host:
+            return
+        ch = sandbox.canonical_host(host) or host
+        key = (ch, port)
+        if key not in seen:
+            seen.add(key)
+            out.append(key)
+
+    if isinstance(tool_input, dict):
+        for field in _HEXSTRIKE_TARGET_FIELDS:
+            value = tool_input.get(field)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            for tok in _HEXSTRIKE_FIELD_SPLIT.split(value.strip()):
+                if not tok:
+                    continue
+                if "://" in tok:
+                    host, port, _path = _split_url(tok)
+                else:
+                    host, port = _split_bare_hostport(tok)
+                _add(host, port)
+
+    text = _stringify(tool_input)
+    for m in URL_RE.finditer(text):
+        host, port, _path = _split_url(m.group(0))
+        _add(host, port)
+    for raw in text.split():
+        tok = raw.strip(_STRIP)
+        if not tok or "://" in tok:
+            continue
+        host_part, port = _split_bare_hostport(tok)
+        if port is None:
+            continue
+        ch = sandbox.canonical_host(host_part) if host_part else None
+        if ch in _SANDBOX_LOOPBACK_HOSTS:
+            _add(ch, port)
+
+    return out
+
+
 def decide(event: dict) -> dict | None:
     """Return the hookSpecificOutput payload, or None to defer (silent)."""
     if registry.is_sandbox():
@@ -378,6 +477,7 @@ def decide(event: dict) -> dict | None:
 
 _CHROME_TOOL_RE = re.compile(r'^mcp__claude-in-chrome__')
 _BURP_SEND_TOOL_RE = re.compile(r'^mcp__burp__send_')
+_HEXSTRIKE_TOOL_RE = re.compile(r'^mcp__hexstrike__')
 
 
 def _is_sandbox_network_call(tool_name: str, command: str) -> bool:
@@ -397,6 +497,11 @@ def _is_sandbox_network_call(tool_name: str, command: str) -> bool:
     if tool_name == "WebFetch":
         return True
     if _CHROME_TOOL_RE.match(tool_name) or _BURP_SEND_TOOL_RE.match(tool_name):
+        return True
+    # Every hexstrike tool is treated as network-capable: the offensive kit's
+    # whole purpose is sending traffic, and fail-closed is the sandbox rule —
+    # a hexstrike call with no resolvable target is DENIED below, not deferred.
+    if _HEXSTRIKE_TOOL_RE.match(tool_name):
         return True
     return False
 
@@ -471,8 +576,21 @@ def _decide_sandbox(event: dict) -> dict | None:
         ambiguous, amb_reason = sandbox.is_ambiguous(_stringify(tool_input))
         if ambiguous:
             return _deny(amb_reason)
+    elif _HEXSTRIKE_TOOL_RE.match(tool_name):
+        # hexstrike args frequently pass a free-form flag string
+        # (`additional_args`, `extra_flags`) straight to the wrapped tool. The
+        # same escape shapes hide a real target from this hook there as in a
+        # Bash command: `$(...)`, a decode pipe, a `-x/--proxy` redirect, an
+        # inline HTTP_PROXY=. Run the identical matcher over the stringified
+        # input and deny outright if any is present.
+        ambiguous, amb_reason = sandbox.is_ambiguous(_stringify(tool_input))
+        if ambiguous:
+            return _deny(amb_reason)
 
-    candidates = _extract_sandbox_candidates(tool_name, tool_input)
+    if _HEXSTRIKE_TOOL_RE.match(tool_name):
+        candidates = _extract_hexstrike_candidates(tool_input)
+    else:
+        candidates = _extract_sandbox_candidates(tool_name, tool_input)
     if not candidates:
         return _deny(
             "network command with no resolvable in-sandbox target; "
