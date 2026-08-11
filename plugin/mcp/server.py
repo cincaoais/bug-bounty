@@ -85,6 +85,55 @@ def scope_override(host: str, reason: str) -> dict:
     return registry.add_override(host, reason)
 
 
+# ---- legal action-class gate (legalgate) -------------------------------------
+
+@mcp.tool()
+def legal_override(gate_class: str, reason: str) -> dict:
+    """Grant a ONE-TIME, logged allowance for a gated LEGAL ACTION CLASS the legal-gate
+    would otherwise deny. gate_class: destructive | dos | credential | pii.
+
+    These classes map to Malaysian statute (CCA 1997 s.5, CMA 1998 s.233, CCA s.6/s.8,
+    PDPA 2010). An override is a DELIBERATE human authorization to proceed with a specific
+    kind of action — never a rote unblock. Record WHY you are authorized (program rules
+    permit this destructive step / this is a disposable local sandbox / etc.). Consumed on
+    next matching action; the consumption is timestamped as a legal audit trail."""
+    return registry.add_legal_override(gate_class, reason)
+
+
+@mcp.tool()
+def legal_attest(jurisdiction: str = "", tester_location: str = "", cssp_licensed: bool = False,
+                 authorization_ref: str = "", handle: str = "") -> dict:
+    """Record the ACTIVE target's standing legal posture — required ONCE before live
+    (bounty-mode) traffic. Until this is set, the first traffic-generating action is denied.
+
+    jurisdiction: where the target is operated/hosted (e.g. 'MY', 'US', 'unknown') — bears on
+      CCA 1997 s.9 extraterritorial reach. tester_location: where YOU are testing from.
+    cssp_licensed: whether you hold a Cyber Security Service Provider licence for penetration-
+      testing services (Cyber Security Act 2024) if that applies to this engagement.
+    authorization_ref: the program/authorization the testing rests on (a URL or reference) —
+      authorization IS the legal boundary under CCA 1997 s.3.
+    This records considerations; it is not legal advice. Sandbox targets never need it."""
+    target = registry.active_target()
+    h = handle or (target["handle"] if target else "")
+    if not h:
+        return {"error": "no active target to attest; create/switch to one first"}
+    return registry.set_attestation(h, jurisdiction=jurisdiction, tester_location=tester_location,
+                                    cssp_licensed=cssp_licensed, authorization_ref=authorization_ref)
+
+
+@mcp.tool()
+def legal_status(handle: str = "") -> dict:
+    """Legal-gate status for a target (default: active): the recorded attestation (jurisdiction,
+    tester location, CSSP-licence status, authorization ref, whether attested) plus the count of
+    unused one-time legal overrides by class. Use to check readiness before live testing."""
+    target = registry.active_target()
+    h = handle or (target["handle"] if target else "")
+    if not h:
+        return {"error": "no active target"}
+    return {"attestation": registry.get_attestation(h),
+            "unused_overrides": registry.unused_legal_overrides()}
+
+
 # ---- recon ingest ------------------------------------------------------------
 
 @mcp.tool()

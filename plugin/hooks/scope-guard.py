@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "mcp"))
 import registry  # noqa: E402
 import sandbox  # noqa: E402  (canonical_host — closes the bare-IP gap below)
 import mission  # noqa: E402  (log_sandbox_decision — sandbox-branch audit trail)
+import legalgate  # noqa: E402  (legal action-class gate — the second enforcement axis)
 
 
 URL_RE = re.compile(r'https?://[^\s"\'`<>|)\]}]+', re.I)
@@ -427,18 +428,109 @@ def _extract_hexstrike_candidates(tool_input: dict) -> list[tuple[str, int | Non
     return out
 
 
+# ---- legal action-class gate (legalgate) -------------------------------------
+
+def _legal_decision(event: dict, active: dict) -> dict | None:
+    """Deny if the call's action-shape matches a gated legal class and not every
+    matched class has an available one-time override; otherwise None.
+
+    When all matched classes DO have an override, each is consumed here (the
+    consumption is the legal audit trail via legal_override.used_at) and None is
+    returned so the call falls through to the normal host/scope logic — an
+    overridden destructive call still has to be in-scope / on the sandbox
+    allow-list. Runs in both bounty and sandbox mode; sandbox decisions are also
+    written to the sandbox_audit table (a logging failure never changes the
+    decision)."""
+    tool_name = event.get("tool_name", "")
+    raw_input = event.get("tool_input", {})
+    tool_input = raw_input if isinstance(raw_input, dict) else {}
+
+    violations = legalgate.classify(tool_name, tool_input)
+    if not violations:
+        return None
+
+    classes = legalgate.classes(violations)
+    sandbox_mode = registry.is_sandbox()
+
+    def _audit(decision: str, reason: str) -> None:
+        if not sandbox_mode:
+            return                         # bounty audit trail = legal_override.used_at
+        try:
+            mission.log_sandbox_decision(
+                active["handle"], tool_name, decision, "", None, reason,
+                _stringify(tool_input)[:200])
+        except Exception:
+            pass                           # logging must never change the decision
+
+    missing = [c for c in classes if not registry.has_legal_override(c)]
+    if not missing:
+        for c in classes:
+            registry.take_legal_override(c)
+        _audit("legal-allow", "legal override(s) consumed: " + ", ".join(classes))
+        return None
+
+    lines = [f"{v.gate_class} [{v.statute}] — {v.signature}: {v.reason}" for v in violations]
+    _audit("legal-deny", "; ".join(f"{v.gate_class}:{v.signature}" for v in violations))
+    return {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": (
+            "Blocked by bb legal-gate (target '%s'). Gated action class(es) with no "
+            "override on record: %s.\n  - %s\n"
+            "These shapes map to Malaysian statute (see plugin/reference/legal-gate-map.json). "
+            "If this action is authorized and you have made a DELIBERATE decision to proceed, "
+            "run mcp__bb__legal_override('<class>', '<why>') for each of: %s — then retry."
+            % (active["handle"], ", ".join(missing), "\n  - ".join(lines), ", ".join(missing))
+        ),
+    }
+
+
+def _deny_unattested(active: dict) -> dict:
+    """Bounty-mode deny: live traffic requires a one-time legal attestation."""
+    return {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": (
+            "Blocked by bb legal-gate: target '%s' is in bounty (live) mode and this is a "
+            "traffic-generating action, but no legal attestation is on record. Before sending "
+            "live traffic you must record your legal posture ONCE — jurisdiction, tester "
+            "location, CSSP-licence status (Cyber Security Act 2024), and the program "
+            "authorization reference — via mcp__bb__legal_attest(...). Then retry."
+            % active["handle"]
+        ),
+    }
+
+
 def decide(event: dict) -> dict | None:
     """Return the hookSpecificOutput payload, or None to defer (silent)."""
-    if registry.is_sandbox():
-        return _decide_sandbox(event)
-
     active = registry.active_target()
     if active is None:
         return None                       # nothing to enforce against yet
 
+    # LEGAL ACTION-CLASS GATE (legalgate) — the second enforcement axis. Runs in
+    # BOTH modes, before any host logic, and INDEPENDENT of whether a network
+    # target is present (a destructive write, `hashcat`, or `rm -rf /` must be
+    # caught even against an in-scope host or with no host at all). Returns a
+    # deny, or None when there is nothing gated / all gated classes were cleared
+    # by a one-time override.
+    legal = _legal_decision(event, active)
+    if legal is not None:
+        return legal
+
+    if registry.is_sandbox():
+        return _decide_sandbox(event)
+
     candidates = extract_targets(event.get("tool_name", ""), event.get("tool_input", {}))
     if not candidates:
         return None                       # non-network action; let normal flow decide
+
+    # ATTESTATION GATE (bounty/live mode only): the first traffic-generating
+    # action is denied until the target's legal posture is recorded once
+    # (CSSP-licence status under the Cyber Security Act 2024; jurisdiction /
+    # extraterritorial exposure under CCA 1997 s.9). Sandbox mode never reaches
+    # here — it is handled by _decide_sandbox above and needs no attestation.
+    if not registry.is_attested(active["handle"]):
+        return _deny_unattested(active)
 
     denials = []
     for host, port, path in candidates:

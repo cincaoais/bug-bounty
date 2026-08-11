@@ -297,6 +297,129 @@ def take_override(host: str) -> bool:
         conn.close()
 
 
+# ---- legal action-class overrides (single-use, logged) -----------------------
+#
+# The legalgate layer of the PreToolUse hook denies gated ACTION CLASSES
+# (destructive|dos|credential|pii) independently of host scope. These mirror the
+# scope_override trio above but are keyed by class, and stamp used_at so the
+# consumption is a legal audit trail, not just a boolean.
+
+_LEGAL_CLASSES = ("destructive", "dos", "credential", "pii")
+
+
+def add_legal_override(gate_class: str, reason: str = "") -> dict:
+    _ensure_registry()
+    gc = (gate_class or "").strip().lower()
+    if gc not in _LEGAL_CLASSES:
+        raise ValueError(f"unknown gate_class {gate_class!r}; expected one of {_LEGAL_CLASSES}")
+    conn = db.connect(db.registry_path())
+    try:
+        conn.execute(
+            "INSERT INTO legal_override (gate_class, reason, created_at, used) VALUES (?,?,?,0)",
+            (gc, reason, _now()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return {"gate_class": gc, "reason": reason}
+
+
+def has_legal_override(gate_class: str) -> bool:
+    """Peek: is there an unused override for this class? Does NOT consume it, so
+    the hook can check that EVERY violated class is covered before burning any."""
+    _ensure_registry()
+    gc = (gate_class or "").strip().lower()
+    conn = db.connect(db.registry_path())
+    try:
+        r = conn.execute(
+            "SELECT 1 FROM legal_override WHERE gate_class=? AND used=0 LIMIT 1", (gc,)
+        ).fetchone()
+        return r is not None
+    finally:
+        conn.close()
+
+
+def take_legal_override(gate_class: str) -> bool:
+    """Consume one unused override for the class, stamping used_at. Returns True
+    if one was found + consumed."""
+    _ensure_registry()
+    gc = (gate_class or "").strip().lower()
+    conn = db.connect(db.registry_path())
+    try:
+        r = conn.execute(
+            "SELECT id FROM legal_override WHERE gate_class=? AND used=0 ORDER BY id LIMIT 1", (gc,)
+        ).fetchone()
+        if r is None:
+            return False
+        conn.execute("UPDATE legal_override SET used=1, used_at=? WHERE id=?", (_now(), r["id"]))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def unused_legal_overrides() -> dict:
+    """Count of unused overrides per class — for legal_status()."""
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        rows = conn.execute(
+            "SELECT gate_class, COUNT(*) AS n FROM legal_override WHERE used=0 GROUP BY gate_class"
+        ).fetchall()
+        return {r["gate_class"]: r["n"] for r in rows}
+    finally:
+        conn.close()
+
+
+# ---- legal attestation (standing per-target status) --------------------------
+#
+# The one-time posture recorded before live traffic: CSSP-licence status (Cyber
+# Security Act 2024) and jurisdiction/extraterritorial exposure (CCA 1997 s.9).
+# Stored on the target row (guarded ALTER columns added in db.init_registry).
+
+def set_attestation(handle: str, jurisdiction: str = "", tester_location: str = "",
+                    cssp_licensed: bool = False, authorization_ref: str = "",
+                    attested_at: str | None = None) -> dict:
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        row = conn.execute("SELECT id FROM target WHERE handle=?", (handle,)).fetchone()
+        if row is None:
+            raise ValueError(f"no such target: {handle}")
+        conn.execute(
+            "UPDATE target SET jurisdiction=?, tester_location=?, cssp_licensed=?, "
+            "authorization_ref=?, attested_at=? WHERE handle=?",
+            (jurisdiction, tester_location, 1 if cssp_licensed else 0,
+             authorization_ref, attested_at or _now(), handle),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return get_attestation(handle)
+
+
+def get_attestation(handle: str) -> dict:
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        r = conn.execute(
+            "SELECT handle, jurisdiction, tester_location, cssp_licensed, "
+            "authorization_ref, attested_at FROM target WHERE handle=?", (handle,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if r is None:
+        return {"handle": handle, "attested": False}
+    d = dict(r)
+    d["cssp_licensed"] = bool(d["cssp_licensed"])
+    d["attested"] = bool((d.get("attested_at") or "").strip())
+    return d
+
+
+def is_attested(handle: str) -> bool:
+    return get_attestation(handle).get("attested", False)
+
+
 if __name__ == "__main__":
     import os, tempfile
     os.environ["BB_DATA_DIR"] = tempfile.mkdtemp()
@@ -310,4 +433,17 @@ if __name__ == "__main__":
     assert check_scope("evil.com")[0] is True     # override consumed
     assert check_scope("evil.com")[0] is False    # only once
     assert scope_status("acme")["in_scope_rules"] == 1
+    # legal overrides: peek is non-consuming; take consumes once
+    assert has_legal_override("destructive") is False
+    add_legal_override("destructive", "authorized destructive PoC step")
+    assert has_legal_override("destructive") is True
+    assert has_legal_override("destructive") is True     # peek didn't consume
+    assert take_legal_override("destructive") is True
+    assert take_legal_override("destructive") is False    # only once
+    # attestation round-trip
+    assert is_attested("acme") is False
+    set_attestation("acme", jurisdiction="MY", tester_location="MY",
+                    cssp_licensed=True, authorization_ref="https://h1/acme")
+    assert is_attested("acme") is True
+    assert get_attestation("acme")["cssp_licensed"] is True
     print("registry self-check ok")
