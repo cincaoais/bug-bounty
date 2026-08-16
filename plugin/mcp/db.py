@@ -16,7 +16,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA_REGISTRY = """
 CREATE TABLE IF NOT EXISTS target (
@@ -35,6 +35,18 @@ CREATE TABLE IF NOT EXISTS scope_override (
   reason TEXT,
   created_at TEXT NOT NULL,
   used INTEGER NOT NULL DEFAULT 0
+);
+-- Legal action-class overrides (v3): a one-time, logged human authorization to
+-- proceed with a gated action class (destructive|dos|credential|pii) that the
+-- legalgate layer of the PreToolUse hook would otherwise deny. Mirrors
+-- scope_override but keyed by class, with used_at for the legal audit trail.
+CREATE TABLE IF NOT EXISTS legal_override (
+  id INTEGER PRIMARY KEY,
+  gate_class TEXT NOT NULL,
+  reason TEXT,
+  created_at TEXT NOT NULL,
+  used INTEGER NOT NULL DEFAULT 0,
+  used_at TEXT
 );
 """
 
@@ -190,6 +202,15 @@ def init_registry() -> None:
         # can't go through CREATE TABLE IF NOT EXISTS, so they're guarded ALTERs.
         _add_column_if_missing(conn, "target", "mode TEXT NOT NULL DEFAULT 'bounty'")
         _add_column_if_missing(conn, "target", "sandbox_app TEXT NOT NULL DEFAULT ''")
+        # Legal attestation (v3): the standing legal posture recorded once per
+        # target before live traffic — CSSP-licence status (Cyber Security Act
+        # 2024) and jurisdiction/extraterritorial exposure (CCA 1997 s.9). Same
+        # guarded-ALTER pattern; all default to empty/0 so existing rows upgrade.
+        _add_column_if_missing(conn, "target", "jurisdiction TEXT NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "target", "tester_location TEXT NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "target", "cssp_licensed INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_missing(conn, "target", "authorization_ref TEXT NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "target", "attested_at TEXT NOT NULL DEFAULT ''")
         conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         conn.commit()
     finally:

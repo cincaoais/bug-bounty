@@ -1,0 +1,79 @@
+{
+  "_comment": "Auditable source-of-truth mapping the legal-gate action classes to Malaysian statute. The enforcement logic lives in plugin/mcp/legalgate.py; this file documents WHY each class is gated and is the place to update when the law changes (see forward_map). Not legal advice.",
+  "version": 1,
+  "operative_law_note": "Computer Crimes Act 1997 (Act 563) is the operative offence law until the Cybercrimes Bill 2026 commences on a Minister-gazetted date; watch the gazette. The Bill repeals CCA 1997 and replaces 'computer' with 'computer system' — the mappings below carry forward (see each class's forward_map).",
+  "classes": [
+    {
+      "gate_class": "destructive",
+      "statute": "Computer Crimes Act 1997 s.5",
+      "cite": "unauthorised modification of the contents of any computer",
+      "signatures": [
+        "HTTP mutating verb: -X/--request DELETE|PUT|PATCH, or an HTTP request-line 'DELETE|PUT|PATCH <path> HTTP/x'",
+        "destructive SQL DDL/DML: DROP TABLE|DATABASE|SCHEMA, TRUNCATE, DELETE FROM, ALTER TABLE",
+        "sqlmap target-mutating flags: --os-shell/--os-cmd/--os-pwn/--file-write/--file-dest/--sql-query",
+        "WebGoat restartlesson.mvc (drops+recreates the lesson DB)",
+        "catastrophic local shell (machine safety): rm -rf on /|~|$HOME|wildcard, dd of=/dev/*, mkfs, > /dev/<disk>, fork bomb"
+      ],
+      "excluded": ["plain POST/GET and reads", "UPDATE...SET / INSERT INTO (too common in benign bodies)", "ordinary rm (rm file, rm -rf ./build)"],
+      "rationale": "Modifying or destroying target data goes beyond proving a vulnerability exists and is the archetypal s.5 offence. A non-destructive PoC is almost always sufficient; a genuine destructive step requires a deliberate, logged override.",
+      "forward_map": "Cybercrimes Bill 2026: unauthorised modification of a computer system — maps forward directly."
+    },
+    {
+      "gate_class": "dos",
+      "statute": "Communications and Multimedia Act 1998 s.233",
+      "cite": "improper use of network facilities / network service (catch-all applied to DoS-shaped and abusive traffic)",
+      "signatures": [
+        "brute-force tools: hydra/thc-hydra/medusa/patator/ncrack (incl. mcp__hexstrike__ wrappers of the same)",
+        "flood/stress tools: wrk/siege/slowloris/slowhttptest/t50/goldeneye/mhddos, or a --flood flag",
+        "explicit concurrency over 50: -t/-c/--threads/--concurrency",
+        "explicit rate over 100/s: --rate/--min-rate/-rl/--rate-limit",
+        "aggressive nmap timing: -T4/-T5"
+      ],
+      "excluded": ["default-concurrency ffuf/nuclei/gobuster recon (no explicit high flag)", "ApacheBench 'ab' / 'hulk' by name (name collides with ordinary tokens) — caught instead by the rate/concurrency thresholds"],
+      "rationale": "High-volume, brute-force, and flooding traffic degrades the target's service and is what most programs explicitly forbid and what gets researchers banned or sued. Only EXPLICITLY cranked-up rates/concurrency are flagged, so ordinary recon at tool defaults is untouched.",
+      "forward_map": "Retained under the CMA 1998; the Cybercrimes Bill 2026 also adds service-availability and misuse offences."
+    },
+    {
+      "gate_class": "credential",
+      "statute": "Computer Crimes Act 1997 s.6 / s.8",
+      "cite": "wrongful communication of a number/code/password/means of access (s.6); s.8 presumption shifting the burden onto anyone in possession of access credentials",
+      "signatures": [
+        "offline cracking: hashcat/john",
+        "credential harvesting/relay: responder/mimikatz/secretsdump/impacket-secretsdump/lsassy",
+        "crackmapexec/nxc with --sam/--lsa/--ntds"
+      ],
+      "excluded": ["reading a JWT or inspecting a cookie value (encoded, meant to be inspectable)"],
+      "rationale": "Cracking, harvesting, or relaying real credentials risks the s.6 offence, and s.8's possession presumption shifts the burden of proof onto the holder. Proving an auth weakness rarely requires actually cracking or exfiltrating live credentials. Storage-side, redact.py scrubs any credential that does reach evidence.",
+      "forward_map": "Cybercrimes Bill 2026 broadens this and adds identity-theft offences."
+    },
+    {
+      "gate_class": "pii",
+      "statute": "Personal Data Protection Act 2010 (as amended 2024/2025)",
+      "cite": "unlawful processing/extraction of personal data; 72-hour breach-notification and DPO duties on the data-handling side",
+      "signatures": [
+        "sqlmap --dump/--dump-all (bulk record extraction)",
+        "mass SELECT ... FROM <personal table: users/customers/accounts/members/clients/patients/profiles/...>"
+      ],
+      "excluded": ["single-record proof reads"],
+      "rationale": "Bulk extraction of real personal data is a distinct legal exposure even against an in-scope, authorized host. A minimal proof (one record, or a count) demonstrates access without hoarding a population's personal data.",
+      "forward_map": "Unchanged by the Cybercrimes Bill; governed by the PDPA and its 2024 amendments."
+    }
+  ],
+  "attestation": {
+    "purpose": "Standing legal STATUS recorded once per target before live traffic — not a per-action shape.",
+    "fields": {
+      "jurisdiction": "where the target is operated/hosted — bears on CCA 1997 s.9 extraterritorial reach",
+      "tester_location": "where the tester is operating from",
+      "cssp_licensed": "whether a Cyber Security Service Provider licence (Cyber Security Act 2024, prescribed penetration-testing services) applies and is held",
+      "authorization_ref": "the program/authorization the testing rests on — authorization IS the legal boundary under CCA 1997 s.3"
+    },
+    "enforcement": "In bounty (live) mode, the first traffic-generating action is denied until legal_attest has been recorded once. Sandbox mode never requires it.",
+    "statutes": ["Cyber Security Act 2024 (CSSP licensing)", "Computer Crimes Act 1997 s.3 (authorisation)", "Computer Crimes Act 1997 s.9 (extraterritorial reach)"]
+  },
+  "honest_limits": [
+    "Regex/substring detection can be evaded by encoding a payload past the pattern; $(...)/decode-pipe escapes are caught separately by sandbox.is_ambiguous in sandbox mode only.",
+    "A credential the model writes into a note is not caught here — that is redact.py's job (storage-side).",
+    "This gate surfaces and blocks high-signal action shapes; it is not legal advice and does not replace reading the program's rules or the statutes.",
+    "Copyright Act 1987 TPM-circumvention and Online Safety Act 2025 duties are out of v1 scope (low bug-bounty relevance); add classes here if they become relevant."
+  ]
+}

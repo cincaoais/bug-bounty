@@ -153,13 +153,19 @@ def importlib_reload(m):
     importlib.reload(m)
 
 
-def _setup(tmp, rules):
+def _setup(tmp, rules, attest=True):
     os.environ["BB_DATA_DIR"] = tmp
     import importlib, db as _db
     importlib.reload(_db)
     importlib.reload(registry)
     registry.create_target("acme", "hackerone", "public")
     registry.set_scope_rules("acme", rules)
+    # Live bounty traffic now requires a one-time legal attestation (legal-gate).
+    # Existing scope tests are about the HOST axis, so they attest by default;
+    # the attestation gate itself is exercised by attest=False tests below.
+    if attest:
+        registry.set_attestation("acme", jurisdiction="MY", tester_location="MY",
+                                 cssp_licensed=True, authorization_ref="test-authz")
 
 
 def test_defer_when_no_active_target():
@@ -699,11 +705,13 @@ def test_hexstrike_sandbox_deny_offbox_host():
 
 def test_hexstrike_sandbox_deny_second_port_in_multi_target():
     """(host,port)-keyed extraction: two ports on the sandbox host must BOTH be
-    evaluated; the out-of-list one denies the whole call."""
+    evaluated; the out-of-list one denies the whole call. Uses nmap_scan (not
+    gated by name) so this exercises the sandbox host/port dedup, not the
+    legal-gate DoS-by-tool-name path — that is covered separately below."""
     with tempfile.TemporaryDirectory() as tmp:
         _setup_sandbox(tmp)
-        out = hook.decide({"tool_name": "mcp__hexstrike__hydra",
-                           "tool_input": {"rhosts": "localhost:3000 localhost:9999"}})
+        out = hook.decide({"tool_name": "mcp__hexstrike__nmap_scan",
+                           "tool_input": {"target": "localhost:3000 localhost:9999"}})
         assert out is not None and out["permissionDecision"] == "deny"
         assert "9999" in out["permissionDecisionReason"]
 
@@ -760,3 +768,126 @@ def test_bounty_target_untouched_by_sandbox_branch():
         out2 = hook.decide({"tool_name": "Bash",
                             "tool_input": {"command": "curl https://evil.com/x"}})
         assert out2["permissionDecision"] == "deny"  # identical to test_deny_out_of_scope_host
+
+
+# ---- legal action-class gate (legalgate) --------------------------------------
+#
+# A THIRD decision axis (after host-scope and sandbox host/port): the SHAPE of
+# the action, mapped to Malaysian statute. Runs in both modes, before host logic,
+# independent of whether a network target is present. Deny + single-use logged
+# override (mcp__bb__legal_override), mirroring the host scope_override pattern.
+
+def test_legal_gate_denies_destructive_even_in_scope():
+    """The whole point: a destructive verb against an IN-SCOPE host is still
+    blocked (CCA s.5 is about modification, not destination)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "Bash",
+                           "tool_input": {"command": "curl -X DELETE https://api.acme.com/users/1"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+        assert "destructive" in out["permissionDecisionReason"]
+        assert "s.5" in out["permissionDecisionReason"]
+
+
+def test_legal_gate_denies_dos_credential_pii():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        for cmd, cls in [("hydra -l a -P w ssh://api.acme.com", "dos"),
+                         ("hashcat -m 0 h.txt w", "credential"),
+                         ("sqlmap -u https://api.acme.com/x --dump -T users", "pii")]:
+            out = hook.decide({"tool_name": "Bash", "tool_input": {"command": cmd}})
+            assert out is not None and out["permissionDecision"] == "deny", cmd
+            assert cls in out["permissionDecisionReason"], cmd
+
+
+def test_legal_override_clears_then_redenies():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        registry.add_legal_override("destructive", "authorized destructive PoC step")
+        cmd = {"command": "curl -X DELETE https://api.acme.com/users/1"}
+        out1 = hook.decide({"tool_name": "Bash", "tool_input": cmd})
+        assert out1 is None or out1.get("permissionDecision") != "deny"  # override cleared it
+        out2 = hook.decide({"tool_name": "Bash", "tool_input": cmd})
+        assert out2 is not None and out2["permissionDecision"] == "deny"  # single-use
+
+
+def test_legal_gate_defers_when_no_active_target():
+    """Documented boundary: with no bounty/sandbox session active, the hook does
+    not police local actions — even a catastrophic one."""
+    with tempfile.TemporaryDirectory() as tmp:
+        os.environ["BB_DATA_DIR"] = tmp
+        import importlib, db as _db
+        importlib.reload(_db); importlib.reload(registry)
+        out = hook.decide({"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}})
+        assert out is None
+
+
+def test_hexstrike_hydra_denied_by_wrapper_name():
+    """mcp__hexstrike__hydra carries the tool identity in the MCP name, not args;
+    it must still be gated as a brute-force (DoS) action."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}])
+        out = hook.decide({"tool_name": "mcp__hexstrike__hydra",
+                           "tool_input": {"target": "api.acme.com"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+        assert "dos" in out["permissionDecisionReason"]
+
+
+def test_legal_gate_enforces_in_sandbox_and_audits():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        out = hook.decide({"tool_name": "Bash",
+                           "tool_input": {"command": "curl -X DELETE http://localhost:3000/api/x"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+        assert "destructive" in out["permissionDecisionReason"]
+        rows = _audit_rows()
+        assert any(r["decision"] == "legal-deny" for r in rows)
+
+
+def test_legal_override_works_in_sandbox_then_host_check_runs():
+    """An overridden destructive call in sandbox still has to hit the allowed
+    sandbox host:port — the legal and host axes are independent. (Uses WebGoat's
+    destructive restartlesson.mvc rather than `-X DELETE`, because `-X` collides
+    with is_ambiguous's case-insensitive `-x`/proxy check in sandbox mode.)"""
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)
+        registry.add_legal_override("destructive", "training: destructive PoC on disposable app")
+        out = hook.decide({"tool_name": "Bash", "tool_input": {
+            "command": "curl http://localhost:3000/WebGoat/service/restartlesson.mvc/SqlInjection"}})
+        assert out is not None and out["permissionDecision"] == "allow"  # cleared, host in allow-list
+
+
+# ---- attestation gate (bounty/live mode) --------------------------------------
+
+def test_bounty_network_action_denied_until_attested():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}], attest=False)
+        out = hook.decide({"tool_name": "Bash",
+                           "tool_input": {"command": "curl https://api.acme.com/v1"}})
+        assert out is not None and out["permissionDecision"] == "deny"
+        assert "attest" in out["permissionDecisionReason"].lower()
+
+
+def test_bounty_allows_after_attestation():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}], attest=False)
+        registry.set_attestation("acme", jurisdiction="MY", tester_location="MY",
+                                 cssp_licensed=True, authorization_ref="h1/acme")
+        out = hook.decide({"tool_name": "Bash",
+                           "tool_input": {"command": "curl https://api.acme.com/v1"}})
+        assert out is None
+
+
+def test_attestation_not_required_for_non_network_action():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup(tmp, [{"pattern": "*.acme.com", "in_scope": True}], attest=False)
+        out = hook.decide({"tool_name": "Bash", "tool_input": {"command": "cat notes.txt"}})
+        assert out is None
+
+
+def test_sandbox_never_requires_attestation():
+    with tempfile.TemporaryDirectory() as tmp:
+        _setup_sandbox(tmp)   # sandbox targets are not attested
+        out = hook.decide({"tool_name": "Bash",
+                           "tool_input": {"command": "curl http://localhost:3000/x"}})
+        assert out is not None and out["permissionDecision"] == "allow"

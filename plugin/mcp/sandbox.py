@@ -147,10 +147,14 @@ def canonical_host(token: str) -> str | None:
     except ValueError:
         ip = None
     if ip is not None:
+        # An IPv4-mapped IPv6 address (::ffff:127.0.0.1) is NOT reported as
+        # is_loopback by ipaddress, but it names the mapped IPv4 interface — fold
+        # to that IPv4's identity so a loopback spelling in this form can't slip
+        # past a sandbox rule written for 127.0.0.1.
+        if ip.version == 6 and ip.ipv4_mapped is not None:
+            return "127.0.0.1" if ip.ipv4_mapped.is_loopback else low
         if ip.is_loopback:
-            if ip.version == 6 and ip.ipv4_mapped is None:
-                return "::1"
-            return "127.0.0.1"
+            return "::1" if ip.version == 6 else "127.0.0.1"
         return low
 
     legacy = _parse_legacy_ipv4(low)

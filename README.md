@@ -299,7 +299,30 @@ the active target's scope, deny-by-default. Out-of-scope → blocked before it
 runs. Explicit out-of-scope rules beat wildcard in-scope rules. It's code, not a
 prompt — so prompt injection and context loss can't defeat it.
 
-### 4. Grounded reports
+### 4. Legal action-class gate (Malaysian statute)
+
+A second axis in the same hook. Where scope enforcement asks *"is the destination
+authorized?"* (CCA 1997 s.3), the legal-gate asks *"is the **shape** of this
+action one that crosses a statutory line?"* — independent of the host, and it
+fires even against an in-scope target. Deny-by-default on four classes, each
+mapped to statute (see [`plugin/reference/legal-gate-map.json`](plugin/reference/legal-gate-map.json)):
+
+| Class | Statute | Gated shapes |
+|---|---|---|
+| `destructive` | CCA 1997 s.5 | HTTP `DELETE`/`PUT`/`PATCH`, destructive SQL, sqlmap `--os-shell`/`--file-write`, WebGoat `restartlesson`, catastrophic local shell |
+| `dos` | CMA 1998 s.233 | brute-force / flood tools, concurrency > 50, rate > 100/s, `nmap -T4/-T5` |
+| `credential` | CCA 1997 s.6/s.8 | offline cracking, credential harvest/relay |
+| `pii` | PDPA 2010 | `sqlmap --dump`, mass `SELECT` over a personal-data table |
+
+A block is a fail-closed **deny**; a deliberate, authorized step proceeds via a
+one-time logged override (`mcp__bb__legal_override`), mirroring the host
+`scope_override` pattern. Separately, live (bounty-mode) traffic is denied until
+the target's legal posture — jurisdiction, tester location, CSSP-licence status
+(Cyber Security Act 2024), authorization reference — is recorded once with
+`mcp__bb__legal_attest`. Sandbox targets need no attestation. See the `bb-legal`
+skill; this surfaces and blocks high-signal shapes, it is **not legal advice**.
+
+### 5. Grounded reports
 
 `assemble_report` builds a draft **only from stored evidence**. Missing sections
 become literal `[YOU MUST FILL THIS IN: ...]` markers — never invented steps,
