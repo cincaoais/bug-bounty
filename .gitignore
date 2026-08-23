@@ -12,3 +12,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+
+# DeepSeek Harness local scaffolding (.dsh/skills is a machine-local junction;
+# hooks.json is superseded by the native dsh-bb-guard plugin)
+.dsh/
+

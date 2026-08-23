@@ -1,0 +1,10 @@
+{
+  "name": "dsh-bb-guard",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "description": "Native DeepSeek Harness scope-guard for the bb bug bounty plugin: gates pwsh/bash/web_fetch (and burp/hexstrike/chrome MCP send tools) through bb's own scope-guard hook."
+}

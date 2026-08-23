@@ -1,0 +1,17 @@
+# bb (bug bounty) for DeepSeek Harness — FINAL profile patch (matches the live profile).
+# Two entries:
+#   bb-mcp   : the bb MCP state server (stdlib Python server, stdio transport)
+#   bb-guard : the native scope-guard hook (gates pwsh/bash/web_fetch via bb scope-guard.py)
+# Apply by replacing the `[]` in C:/Users/johan/.dsh/profiles/web/cordis.patch.yml,
+# then fully restart the harness.
+- insert:
+    - id: bb-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: bb
+        transport: stdio
+        command: 'C:/Users/johan/AppData/Local/Programs/Python/Python314/python.exe'
+        args: ['D:/Github/bug-bounty/plugin/mcp/server.py']
+        cwd: 'D:/Github/bug-bounty'
+    - id: bb-guard
+      name: 'dsh-bb-guard'

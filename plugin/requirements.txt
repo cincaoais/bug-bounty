@@ -1,5 +1,7 @@
 # Runtime: exactly one dependency. Everything else is Python stdlib.
-mcp>=1.2
+# NOTE (DSH port): mcp 2.x moved FastMCP onto a new import path that this plugin does
+# not use, so pin to the 1.x line the plugin was built against.
+mcp>=1.2,<2
 
 # Dev only (not needed to run the plugin):
 #   pytest
