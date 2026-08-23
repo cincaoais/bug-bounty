@@ -11,7 +11,7 @@ Code prompt · **[you, GUI]** click through an app · ⚠️ = a step I could no
 ## 0. What you're installing
 
 - A **local MCP server** (Python) that holds your case data in SQLite — no network, no LLM calls.
-- **36 skills** (workflow + 23 vuln-class playbooks) that tell Claude how to drive it.
+- **48 skills** (15 workflow + 33 vuln-class playbooks) that tell Claude how to drive it.
 - A **PreToolUse hook** that hard-blocks out-of-scope commands.
 
 It is **ingest-only**: it never sends traffic to a target. You run recon tools and browse;
