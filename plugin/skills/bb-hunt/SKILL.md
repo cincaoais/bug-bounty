@@ -50,6 +50,16 @@ IDOR/BOLA), load both — they overlap on purpose. Do not force a single choice.
 | Exposed .git/.env/backup, keys in JS, cloud buckets | `pb-secrets-exposure` |
 | Front-end/back-end request parsing differences | `pb-request-smuggling` |
 | A cache in front of the app, unkeyed inputs reflected | `pb-cache-poisoning` |
+| A WAF/filter blocking a payload, 403s, sanitized echoes | `pb-waf-bypass` |
+| A chatbot / AI feature / agent / RAG / model endpoint | `pb-llm-security` |
+| Cloud assets, ops panels, middleware, CI/CD, supply chain | `pb-cloud-infra` |
+| Source code or decompiled artifacts to audit statically | `pb-source-audit` |
+| Serialized data, deep-merge objects, yaml/XML parsers | `pb-deserialization` |
+| A WeChat/Alipay miniprogram or WeChat Cloud surface | `pb-miniprogram` |
+| An Android APK — exported components, deep links, keys | `pb-android` |
+| An APK that decompiles to stubs — packed, needs unpacking | `pb-apk-reversing` |
+| The REST/protocol surface — docs, versions, methods, WebSocket | `pb-api-security` |
+| A Windows EXE/DLL/SYS or .NET binary to analyze | `pb-windows-binary` |
 
 If nothing matches cleanly, describe the endpoint's shape and pick the closest — then
 say what you're unsure about rather than forcing a bad fit.

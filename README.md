@@ -63,8 +63,8 @@ bb is built around the things prompts can't give you:
 | 💳 **Runs on your subscription** | Interactive Claude Code only. No API key, no metered billing, no background hunters. |
 | 🎯 **Grounded, not fabricated** | Reports are assembled from *stored evidence only*; missing pieces become `[YOU MUST FILL THIS IN]`, never plausible filler. |
 
-**By the numbers:** 32 MCP tools · 36 skills (13 workflow + 23 vulnerability-class
-playbooks) · a 98-entry test-case taxonomy (73 OWASP WSTG + 25 bounty-specific) ·
+**By the numbers:** 32 MCP tools · 48 skills (15 workflow + 33 vulnerability-class
+playbooks) · a 109-entry test-case taxonomy (73 OWASP WSTG + 36 bounty-specific) ·
 24 "first-signal" teaching classes · 223 passing tests.
 
 ---
@@ -367,7 +367,7 @@ it from that stored evidence and `bb-gate` checks it's actually submittable.
 
 ## Skills reference
 
-**Workflow skills (13)** — invoke with `/bb-<name>` or let Claude pick them:
+**Workflow skills (15)** — invoke with `/bb-<name>` or let Claude pick them:
 
 | Skill | Purpose |
 |---|---|
@@ -385,7 +385,7 @@ it from that stored evidence and `bb-gate` checks it's actually submittable.
 | `bb-review` | end-of-session retrospective + coverage report |
 | `bb-hunt` | router → the right vulnerability-class playbook |
 
-**Playbooks (23)** — `pb-*`, each a methodology (not a payload dump), routed by
+**Playbooks (33)** — `pb-*`, each a methodology (not a payload dump), routed by
 `bb-hunt`:
 
 `idor-bola` · `broken-access-control` · `ssrf` · `business-logic` ·
@@ -393,7 +393,10 @@ it from that stored evidence and `bb-gate` checks it's actually submittable.
 `graphql-abuse` · `race-condition` · `xss` · `sql-injection` · `injection`
 (SSTI/cmd/XXE) · `csrf` · `open-redirect` · `file-upload` · `path-traversal` ·
 `jwt-flaws` · `oauth-flaws` · `cors-misconfig` · `subdomain-takeover` ·
-`secrets-exposure` · `request-smuggling` · `cache-poisoning`
+`secrets-exposure` · `request-smuggling` · `cache-poisoning` ·
+`waf-bypass` · `llm-security` · `cloud-infra` · `source-audit` ·
+`deserialization` · `miniprogram` · `android` · `apk-reversing` ·
+`api-security` · `windows-binary`
 
 Each playbook follows the same 8 sections: *When this applies · First signals ·
 Enumeration · Test procedure · Evidence to capture · Escalation · Out-of-scope
@@ -497,7 +500,7 @@ bug-bounty/
 │  ├─ mcp/                       Python: server, scope, db, coverage,
 │  │                             ingest, correlate, redact, report, safety
 │  ├─ hooks/scope-guard.py       the PreToolUse scope enforcer
-│  ├─ skills/                    36 skills (bb-* workflow + pb-* playbooks)
+│  ├─ skills/                    48 skills (bb-* workflow + pb-* playbooks)
 │  └─ reference/                 WSTG + bounty taxonomy, first-signal data
 ├─ tests/                        223 tests (scope, hook, ingest, redaction…)
 └─ docs/
