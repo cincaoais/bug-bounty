@@ -82,6 +82,19 @@ Two findings would most change this verdict: **(1)** whether the programs you ac
 >
 > **First milestone:** the egress proxy + token bucket, with tests proving (a) a non-allowlisted host is blocked at the proxy even when the hook's host-parse is evaded (`$(...)`/base64), and (b) a `-L` redirect to an out-of-scope host is blocked at the DNS lookup. Then propose the autonomy-tier config schema and the guardian-model review hook as milestone 2.
 
+## ROE check (2026-09-02) — resolves open question #1
+
+bb has no real active program in its ledger (only a `test` fixture), so this is the *representative-policy* form of the check, not a per-program read. Finding:
+
+- **Manual, per-request active testing is universally permitted** — it is what a bug bounty *is*. Sending crafted requests to in-scope assets is the expected activity, not something programs forbid.
+- **Automated *scanning* is commonly restricted or prohibited** — the recurring policy line is "no automated scanners, DoS, or large-scale discovery scans." The target is **traffic volume and blast radius**, not automation as such.
+- **The dividing line is volume, not manual-vs-automated.** Throttled tooling (`nuclei -rl`, careful `ffuf`) is widely tolerated when low-volume — "all automated testing should be throttled to prevent lockout." Aggressive/mass scans are what get banned.
+- **Per-program variance is the rule** — each policy is customized (some ban scanners outright, some allow throttled tools, some restrict by tech stack). Every program's policy must be read before active testing.
+
+**Verdict — Conditionally GO, and it sharpens milestone 1.** A bb active mode limited to *low-volume, per-request, rate-limited, human-gated* probes (R&D tiers 1–2) sits inside the permitted zone — it is mechanized manual testing, not a scanner. An autonomous mass-scanner sits in the prohibited zone and stays permanently off the table (bb's `legalgate` already blocks DoS-shaped tools and over-threshold concurrency/rate flags). So the per-host **token bucket is the ROE-compliance control, not merely a safety feature** — it is what keeps traffic under a program's threshold. Active mode must additionally be **per-program opt-in**, gated on an explicit "active/automated testing permitted?" fact that `bb-scope`/`bb-start` capture and the mode enforces deterministically. Net effect: the R&D verdict stays **Pursue**, and confidence on the "is there a market for this" axis rises from medium to **high — for the constrained form only.**
+
+Sources: [The Rules of Engagement for Bug Bounty Programs (academic)](https://www.ifca.ai/fc18/preproceedings/105.pdf) · [HackerOne — Bug Bounty Programs](https://www.hackerone.com/bug-bounty-programs) · [Nuclei for bug bounty — rate-limiting practice](https://bugbase.ai/blog/automating-bug-bounties-with-nuclei)
+
 ## Sources
 - [CNN — An OpenAI test model escaped and broke into a real company's servers](https://www.cnn.com/2026/07/22/tech/openai-hugging-face-ai-cybersecurity)
 - [CNBC — OpenAI cyber models broke out of training environment to hack Hugging Face](https://www.cnbc.com/2026/07/22/open-ai-cyber-models-hack-hugging-face.html)
