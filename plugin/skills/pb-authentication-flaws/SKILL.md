@@ -14,6 +14,7 @@ Notice these before you've formed any hypothesis about a bug:
 - The reset token appearing somewhere beyond the single email/SMS it should live in — a URL you can see in a Referer header, an analytics/tracking pixel request, or an API response body that echoes it back.
 - Any measurable difference between "this identifier exists" and "this identifier doesn't" across login, registration, and password-reset endpoints — a different status code, a different error string, a different response time class, an extra field in the body.
 - A login form with no visible lockout, CAPTCHA, or backoff after several wrong attempts on your own test account — an *observation* about exposure, not an invitation to run a credential list against it.
+- A verification code or OTP (SMS, email, image, slider) whose acceptance looks *reusable, unbound to the recipient, or decided client-side* — the same code accepted twice, a code still valid after a wrong submit, or a `success:true`/`riskLevel:0` field the client sends rather than the server deciding. This is about the code's *validation logic*, distinct from a code simply being absent.
 - MFA state expressed as something the client reads and acts on (`"mfa_required": true` in a JSON body, a query parameter, a client-side redirect) rather than the server simply refusing to issue a usable session until the second factor is verified.
 - A "trust this device" or "remember me for N days" cookie set at a point in the flow that precedes MFA verification.
 - A mobile-app or legacy API version of login/registration that appears to enforce a visibly weaker policy (no MFA prompt, no lockout, different password rules) than the primary web flow — WSTG-ATHN-10.
@@ -33,7 +34,7 @@ Quick map of where flaws cluster by flow, for triage when time is short:
 
 ## Enumeration
 1. List every credential-related endpoint on the target: login, logout, register, request-reset, confirm-reset, change-password, MFA-enroll, MFA-verify, MFA-recovery-code redemption, "resend code," "resend verification email," SSO callback.
-2. For each, record what identifier it accepts (email, username, phone), what it returns, and whether a rate-limit or lockout behavior is visible at all.
+2. For each, record what identifier it accepts (email, username, phone), what it returns, and whether a rate-limit or lockout behavior is visible at all; for any code/OTP step, also note which channel delivers the code (SMS/email/image/slider) and whether the submit is bound to that channel.
 3. Enumerate every MFA method the app offers (TOTP, SMS, email code, push, backup/recovery codes) — each is a separately implemented surface and rarely shares identical protections with the others.
 4. Pull auth-adjacent routes out of client-side artifacts: JS bundle route tables, mobile app strings, or an older API version (`/v1/login` beside `/v2/login`) that may still be live and less carefully maintained.
 5. Note where password-reset and MFA-recovery intersect account-recovery as a whole — a "lost your MFA device" path is often a second, less-scrutinized authentication bypass built to handle the first one failing.
@@ -51,6 +52,15 @@ Quick map of where flaws cluster by flow, for triage when time is short:
 9. Recovery-question weakness (WSTG-ATHN-08): if security questions exist, note the answer space size and whether attempts against them are rate-limited the same way the main login is.
 10. Pre-verification access check: on a freshly registered, not-yet-email-verified account, attempt an authenticated action that should logically require verification first — note exactly what is and isn't gated on that status.
 11. Alternate-channel parity check: replay the lockout/backoff and password-policy observations from step 4 against any mobile or legacy endpoint found in enumeration, since a weaker policy there (WSTG-ATHN-10) is a separate, independently reportable gap even if the primary web flow is solid.
+12. Verification-code / CAPTCHA bypass (WSTG-ATHN-06): where a code (SMS, email, image, or slider) gates a sensitive step, characterize the *validation*, not just its presence — each of the following is a distinct, independently reportable weakness when it reaches a real consequence (account takeover, acting as another identity, or an SMS/email flood). Test on your own test account and only against identifiers you control:
+    - **reuse** — the same code accepted on two consecutive submits;
+    - **no-refresh** — a code that stays valid after a wrong submit, so it never rotates (this, not raw guessing, is what makes a short code weak);
+    - **client-decided result** — a `success:true` / `riskLevel:0` / `pass:1` field the client sends and the server trusts, instead of the server deciding;
+    - **result echo** — the code or its verdict returned in a JSON body, `Set-Cookie`, or a response header;
+    - **channel-not-bound** — a code delivered to your own number/email accepted when submitted for a *different* identifier you also control (the cross-recipient case — never against a stranger's identifier);
+    - **skip-step** — calling the post-verification endpoint directly, bypassing the code step entirely;
+    - **front-end-only** — the code validated in JS but not re-checked server-side.
+    Record which one holds and exactly what it gated — the finding is the server's validation logic, not the code's existence.
 
 ## Evidence to capture
 - Both branches of every enumeration diff (valid vs. invalid identifier), with full request/response pairs, not a paraphrase of the difference.
@@ -69,10 +79,11 @@ Quick map of where flaws cluster by flow, for triage when time is short:
 - Once any auth flow issues a session, hand off session-lifecycle questions (does it rotate, does logout kill it) to `pb-session-management` rather than re-deriving that methodology here.
 - Pre-verification access to authenticated functionality escalates fastest when the reachable action itself has real consequence (placing an order, sending a message as that identity) rather than a harmless read.
 - A weaker alternate-channel policy is worth more once you show it reaches the same underlying account and data as the primary channel — confirm both channels operate on the same backend identity before framing it as a bypass rather than a separate, lower-stakes surface.
+- A verification-code bypass escalates by what the code protected: a reusable or unbound reset OTP that reaches another identity's account is account takeover; a code step skipped on a change-password or withdrawal action inherits that action's consequence. A code weakness that only re-enters your own account is self-inflicted and weaker — chase the cross-user reach before framing severity.
 
 ## Out-of-scope traps
 - Username/email enumeration alone is frequently accepted risk on bug bounty programs — check the program's policy and disclosed-report history before writing it up standalone; it's stronger paired with reset-flow leakage or a missing lockout than reported alone.
-- Missing CAPTCHA or no visible rate limit is commonly excluded by programs as a design tradeoff — check `bb-scope`-captured exclusion notes before treating it as the finding itself rather than supporting context.
+- Missing CAPTCHA or no visible rate limit is commonly excluded by programs as a design tradeoff — check `bb-scope`-captured exclusion notes before treating it as the finding itself rather than supporting context. This exclusion is about *absence*; a CAPTCHA or code that is present but *bypassable* (reused, unbound, client-decided) is a different, reportable class when it yields account takeover or a flood — keep the two apart and don't let the exclusion suppress a genuine bypass.
 - Weak password-complexity policy alone (no digit required, short minimum length) is usually informative-only; don't lead a report with it.
 - Any lockout/backoff observation must stay confined to your own test account — never run repeated auth attempts against an identifier that isn't yours, even to "confirm" the same behavior.
 - Testing reset-link expiry needs enough real elapsed time to be conclusive; a token that still works after five minutes says nothing about a policy that claims 24-hour expiry.

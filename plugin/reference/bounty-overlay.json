@@ -34,5 +34,7 @@
   { "id": "BB-AND-01", "category": "Mobile", "title": "Test the Android APK for hardcoded keys and exported components without permission checks", "tier": 2, "applies_to": ["any"], "scope_level": "host" },
   { "id": "BB-WIN-01", "category": "Binary", "title": "Analyze distributed Windows binaries for dangerous input-to-sink handling", "tier": 2, "applies_to": ["any"], "scope_level": "host" },
   { "id": "BB-WAF-01", "category": "Input Validation", "title": "Test filter-bypass variants when a payload is blocked by WAF or sanitization", "tier": 2, "applies_to": ["any"], "scope_level": "host" },
-  { "id": "BB-SRC-01", "category": "Code Review", "title": "Audit source-available artifacts for input-to-sink chains (concatenation, deserialization, auth gaps)", "tier": 2, "applies_to": ["any"], "scope_level": "host" }
+  { "id": "BB-SRC-01", "category": "Code Review", "title": "Audit source-available artifacts for input-to-sink chains (concatenation, deserialization, auth gaps)", "tier": 2, "applies_to": ["any"], "scope_level": "host" },
+  { "id": "BB-UNAUTH-01", "category": "API", "title": "Reconstruct unauthenticated API paths and keys from public sources (standalone/migrated H5, sibling or same-IP hosts, front-end crypto used as auth)", "tier": 1, "applies_to": ["any"], "scope_level": "host", "path_hint": "gateway|apigw|appgw|h5|invoice|activity|open|anon|getrsakey" },
+  { "id": "BB-CAPTCHA-01", "category": "Authentication", "title": "Test a verification code or CAPTCHA for reusable, unbound, or client-decided validation (bypass, not mere absence)", "tier": 1, "applies_to": ["has-params", "write-method"], "scope_level": "endpoint", "path_hint": "login|register|reset|verify|code|otp|captcha|sms|sendcode" }
 ]

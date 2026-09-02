@@ -63,9 +63,9 @@ bb is built around the things prompts can't give you:
 | 💳 **Runs on your subscription** | Interactive Claude Code only. No API key, no metered billing, no background hunters. |
 | 🎯 **Grounded, not fabricated** | Reports are assembled from *stored evidence only*; missing pieces become `[YOU MUST FILL THIS IN]`, never plausible filler. |
 
-**By the numbers:** 32 MCP tools · 48 skills (15 workflow + 33 vulnerability-class
-playbooks) · a 109-entry test-case taxonomy (73 OWASP WSTG + 36 bounty-specific) ·
-24 "first-signal" teaching classes · 223 passing tests.
+**By the numbers:** 32 MCP tools · 50 skills (16 workflow + 34 vulnerability-class
+playbooks) · a 111-entry test-case taxonomy (73 OWASP WSTG + 38 bounty-specific) ·
+24 "first-signal" teaching classes · 457 passing tests.
 
 ---
 
@@ -367,13 +367,15 @@ it from that stored evidence and `bb-gate` checks it's actually submittable.
 
 ## Skills reference
 
-**Workflow skills (15)** — invoke with `/bb-<name>` or let Claude pick them:
+**Workflow skills (16)** — invoke with `/bb-<name>` or let Claude pick them:
 
 | Skill | Purpose |
 |---|---|
+| `bb-start` | onboard a program — interview, verify claims, write scope + legal posture, hand off |
 | `bb-target` | create / switch / list targets |
 | `bb-pick` | choose or evaluate a program (desk research only) |
 | `bb-scope` | turn published scope into enforceable rules |
+| `bb-legal` | work with the legal action-class gate (Malaysian statute); why an action was denied |
 | `bb-recon` | ingest nuclei/httpx/ffuf/katana/burp output + triage |
 | `bb-burp` | bridge Burp proxy history into the ledger (read-only) |
 | `bb-code` | read client-side JS & source-available code (zero-traffic surface) |
@@ -384,8 +386,9 @@ it from that stored evidence and `bb-gate` checks it's actually submittable.
 | `bb-learn` | disclosed-report study, drills on your live target |
 | `bb-review` | end-of-session retrospective + coverage report |
 | `bb-hunt` | router → the right vulnerability-class playbook |
+| `bb-sandbox` | autonomously hunt + score a **local** OWASP sandbox (the only traffic-sending skill) |
 
-**Playbooks (33)** — `pb-*`, each a methodology (not a payload dump), routed by
+**Playbooks (34)** — `pb-*`, each a methodology (not a payload dump), routed by
 `bb-hunt`:
 
 `idor-bola` · `broken-access-control` · `ssrf` · `business-logic` ·
@@ -396,7 +399,7 @@ it from that stored evidence and `bb-gate` checks it's actually submittable.
 `secrets-exposure` · `request-smuggling` · `cache-poisoning` ·
 `waf-bypass` · `llm-security` · `cloud-infra` · `source-audit` ·
 `deserialization` · `miniprogram` · `android` · `apk-reversing` ·
-`api-security` · `windows-binary`
+`api-security` · `windows-binary` · `unauth-surface`
 
 Each playbook follows the same 8 sections: *When this applies · First signals ·
 Enumeration · Test procedure · Evidence to capture · Escalation · Out-of-scope
@@ -502,7 +505,7 @@ bug-bounty/
 │  ├─ hooks/scope-guard.py       the PreToolUse scope enforcer
 │  ├─ skills/                    48 skills (bb-* workflow + pb-* playbooks)
 │  └─ reference/                 WSTG + bounty taxonomy, first-signal data
-├─ tests/                        223 tests (scope, hook, ingest, redaction…)
+├─ tests/                        457 tests (scope, hook, ingest, redaction…)
 └─ docs/
    ├─ phase-1-rnd-report.md      the research behind the design
    ├─ phase-2-build-plan.md      the detailed build plan

@@ -60,6 +60,8 @@ IDOR/BOLA), load both — they overlap on purpose. Do not force a single choice.
 | An APK that decompiles to stubs — packed, needs unpacking | `pb-apk-reversing` |
 | The REST/protocol surface — docs, versions, methods, WebSocket | `pb-api-security` |
 | A Windows EXE/DLL/SYS or .NET binary to analyze | `pb-windows-binary` |
+| Unauthenticated surface — path not in main-site JS, standalone/migrated H5, sibling or same-IP host, gateway 405/empty-array, front-end crypto used as auth | `pb-unauth-surface` |
+| A verification code / OTP / CAPTCHA that may be reusable, unbound to the recipient, or decided client-side | `pb-authentication-flaws` |
 
 If nothing matches cleanly, describe the endpoint's shape and pick the closest — then
 say what you're unsure about rather than forcing a bad fit.
