@@ -37,3 +37,25 @@ class Allowlist:
                 shown = rule.port if rule.port is not None else "*"
                 return (True, f"matches allowlist rule {rule.host}:{shown}")
         return (False, f"{ch}:{port} not on allowlist (deny-by-default)")
+
+
+# append to plugin/mcp/egress.py
+class TokenBucket:
+    """Per-host token bucket. Deterministic: the caller passes `now` (seconds).
+    One token consumed per request; refills at `refill_per_sec`."""
+
+    def __init__(self, capacity, refill_per_sec):
+        self.capacity = float(capacity)
+        self.refill_per_sec = float(refill_per_sec)
+        self._state: dict[str, tuple[float, float]] = {}  # host -> (tokens, last_ts)
+
+    def try_consume(self, host, now) -> tuple[bool, float]:
+        tokens, last = self._state.get(host, (self.capacity, now))
+        tokens = min(self.capacity, tokens + (now - last) * self.refill_per_sec)
+        if tokens >= 1.0:
+            self._state[host] = (tokens - 1.0, now)
+            return (True, 0.0)
+        needed = 1.0 - tokens
+        retry_after = needed / self.refill_per_sec if self.refill_per_sec > 0 else float("inf")
+        self._state[host] = (tokens, now)
+        return (False, retry_after)
