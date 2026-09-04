@@ -1,4 +1,3 @@
-# tests/test_egress.py
 import egress
 from egress import Rule, Allowlist
 
@@ -38,7 +37,6 @@ def test_allowlist_denies_invalid_host():
     assert Allowlist([Rule("example.com", 443)]).allows("", 443)[0] is False
 
 
-# append to tests/test_egress.py
 from egress import TokenBucket
 
 
@@ -65,7 +63,6 @@ def test_token_bucket_is_per_host():
     assert tb.try_consume("a", now=0.0)[0] is False
 
 
-# append to tests/test_egress.py
 from egress import PolicyDecision, decide
 
 
@@ -93,7 +90,6 @@ def test_decide_denies_over_rate_with_429():
     assert d.allow is False and d.code == 429 and d.gate == "rate"
 
 
-# append to tests/test_egress.py
 import json
 from egress import AuditRecord
 

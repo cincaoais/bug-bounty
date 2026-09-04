@@ -1,4 +1,3 @@
-# plugin/mcp/egress.py
 """Active-lab egress policy (milestone 1): pure decision logic, no I/O.
 
 Standalone; NOT wired into the live plugin. Unlike sandbox mode, non-loopback
@@ -41,7 +40,6 @@ class Allowlist:
         return (False, f"{ch}:{port} not on allowlist (deny-by-default)")
 
 
-# append to plugin/mcp/egress.py
 class TokenBucket:
     """Per-host token bucket. Deterministic: the caller passes `now` (seconds).
     One token consumed per request; refills at `refill_per_sec`."""
@@ -63,7 +61,6 @@ class TokenBucket:
         return (False, retry_after)
 
 
-# append to plugin/mcp/egress.py
 @dataclass(frozen=True)
 class PolicyDecision:
     allow: bool
@@ -86,7 +83,6 @@ def decide(host, port, now, allowlist, buckets) -> PolicyDecision:
     return PolicyDecision(True, 200, reason, "allow", ch, port)
 
 
-# append to plugin/mcp/egress.py
 @dataclass(frozen=True)
 class AuditRecord:
     ts: float
