@@ -8,6 +8,8 @@ docs/superpowers/specs/2026-09-04-bb-egress-chokepoint-design.md
 """
 from __future__ import annotations
 
+import json
+import time as _time
 from dataclasses import dataclass
 
 import sandbox  # plugin/mcp on sys.path (conftest / proxy startup insert)
@@ -82,3 +84,32 @@ def decide(host, port, now, allowlist, buckets) -> PolicyDecision:
         return PolicyDecision(False, 429, f"rate limit exceeded (retry after {retry:.2f}s)",
                               "rate", ch, port)
     return PolicyDecision(True, 200, reason, "allow", ch, port)
+
+
+# append to plugin/mcp/egress.py
+@dataclass(frozen=True)
+class AuditRecord:
+    ts: float
+    host: str
+    port: int | None
+    kind: str          # "CONNECT" | HTTP verb ("GET", ...)
+    decision: str      # "allow" | "deny"
+    code: int
+    gate: str
+    reason: str
+
+    @classmethod
+    def from_decision(cls, kind, d: "PolicyDecision", ts=None) -> "AuditRecord":
+        return cls(
+            ts=ts if ts is not None else _time.time(),
+            host=d.host, port=d.port, kind=kind,
+            decision="allow" if d.allow else "deny",
+            code=d.code, gate=d.gate, reason=d.reason,
+        )
+
+    def to_json_line(self) -> str:
+        return json.dumps({
+            "ts": self.ts, "host": self.host, "port": self.port, "kind": self.kind,
+            "decision": self.decision, "code": self.code, "gate": self.gate,
+            "reason": self.reason,
+        }, separators=(",", ":")) + "\n"

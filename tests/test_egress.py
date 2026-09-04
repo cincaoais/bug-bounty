@@ -91,3 +91,23 @@ def test_decide_denies_over_rate_with_429():
     assert decide("example.com", 443, 0.0, al, tb).allow is True
     d = decide("example.com", 443, 0.0, al, tb)
     assert d.allow is False and d.code == 429 and d.gate == "rate"
+
+
+# append to tests/test_egress.py
+import json
+from egress import AuditRecord
+
+
+def test_audit_record_from_decision_and_json_line():
+    al = Allowlist([Rule("example.com", 443)])
+    tb = TokenBucket(capacity=1, refill_per_sec=0.0)
+    d = decide("evil.example", 443, 0.0, al, tb)
+    rec = AuditRecord.from_decision("CONNECT", d, ts=1234.5)
+    obj = json.loads(rec.to_json_line())
+    assert obj["host"] == "evil.example"
+    assert obj["kind"] == "CONNECT"
+    assert obj["decision"] == "deny"
+    assert obj["code"] == 403
+    assert obj["gate"] == "destination"
+    assert obj["ts"] == 1234.5
+    assert rec.to_json_line().endswith("\n")
