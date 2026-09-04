@@ -59,3 +59,26 @@ class TokenBucket:
         retry_after = needed / self.refill_per_sec if self.refill_per_sec > 0 else float("inf")
         self._state[host] = (tokens, now)
         return (False, retry_after)
+
+
+# append to plugin/mcp/egress.py
+@dataclass(frozen=True)
+class PolicyDecision:
+    allow: bool
+    code: int          # 200 | 403 | 429
+    reason: str
+    gate: str          # "allow" | "destination" | "rate"
+    host: str
+    port: int | None
+
+
+def decide(host, port, now, allowlist, buckets) -> PolicyDecision:
+    ch = sandbox.canonical_host(host) or host
+    ok, reason = allowlist.allows(host, port)
+    if not ok:
+        return PolicyDecision(False, 403, reason, "destination", ch, port)
+    allowed, retry = buckets.try_consume(ch, now)
+    if not allowed:
+        return PolicyDecision(False, 429, f"rate limit exceeded (retry after {retry:.2f}s)",
+                              "rate", ch, port)
+    return PolicyDecision(True, 200, reason, "allow", ch, port)

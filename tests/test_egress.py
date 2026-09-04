@@ -63,3 +63,31 @@ def test_token_bucket_is_per_host():
     assert tb.try_consume("a", now=0.0)[0] is True
     assert tb.try_consume("b", now=0.0)[0] is True        # separate bucket
     assert tb.try_consume("a", now=0.0)[0] is False
+
+
+# append to tests/test_egress.py
+from egress import PolicyDecision, decide
+
+
+def test_decide_allows_in_scope_within_rate():
+    al = Allowlist([Rule("example.com", 443)])
+    tb = TokenBucket(capacity=5, refill_per_sec=0.0)
+    d = decide("example.com", 443, 0.0, al, tb)
+    assert d.allow is True and d.code == 200 and d.gate == "allow"
+
+
+def test_decide_denies_off_scope_with_403_and_does_not_consume_token():
+    al = Allowlist([Rule("example.com", 443)])
+    tb = TokenBucket(capacity=1, refill_per_sec=0.0)
+    d = decide("evil.example", 443, 0.0, al, tb)
+    assert d.allow is False and d.code == 403 and d.gate == "destination"
+    # token was NOT consumed by the off-scope request
+    assert tb.try_consume("example.com", 0.0)[0] is True
+
+
+def test_decide_denies_over_rate_with_429():
+    al = Allowlist([Rule("example.com", 443)])
+    tb = TokenBucket(capacity=1, refill_per_sec=0.0)
+    assert decide("example.com", 443, 0.0, al, tb).allow is True
+    d = decide("example.com", 443, 0.0, al, tb)
+    assert d.allow is False and d.code == 429 and d.gate == "rate"
