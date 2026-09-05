@@ -15,6 +15,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+import activelab
 import correlate
 import coverage
 import ingest
@@ -132,6 +133,48 @@ def legal_status(handle: str = "") -> dict:
         return {"error": "no active target"}
     return {"attestation": registry.get_attestation(h),
             "unused_overrides": registry.unused_legal_overrides()}
+
+
+@mcp.tool()
+def set_active_permission(permitted: bool, note: str = "", handle: str = "") -> dict:
+    """Record whether the ACTIVE program's published ROE permits active/automated testing.
+    Distinct from legal_attest (that records YOUR legal posture). Default until set: NOT
+    permitted. `note` should quote the policy text and any rate ceiling. This is
+    verified-posture bookkeeping — it does NOT itself grant any traffic (the scope-guard
+    hook is unchanged); never set permitted=True from the user's say-so alone."""
+    target = registry.active_target()
+    h = handle or (target["handle"] if target else "")
+    if not h:
+        return {"error": "no active target; create/switch to one first"}
+    return registry.set_active_permission(h, permitted=permitted, note=note)
+
+
+@mcp.tool()
+def active_lab_preflight(allowlist_hosts: list[str], proxy_reachable: str = "",
+                         firewall_direct_egress: str = "", proxy_to_target: str = "") -> dict:
+    """Verify the active-lab containment posture for the ACTIVE target -> {ready, checks}.
+    Fail-closed. Reads attestation + ROE gate + scope from the ledger; takes human-run probe
+    evidence (this tool makes NO network call):
+      proxy_reachable: 'UP' when the M1 egress proxy answers on its loopback port.
+      firewall_direct_egress: 'BLOCKED' when a direct (non-proxy) egress from the VM FAILS.
+      proxy_to_target: 'OK' when a request to the target THROUGH the proxy SUCCEEDS.
+    `ready` is advisory — nothing grants traffic on it (see docs/active-lab-setup.md)."""
+    target = registry.active_target()
+    if target is None:
+        return {"ready": False,
+                "checks": [{"name": "active-target", "status": "fail", "detail": "no active target"}]}
+    h = target["handle"]
+    allow = list(allowlist_hosts or [])
+    offscope = [x for x in allow if not registry.check_scope(x, "")[0]]
+    return activelab.active_lab_preflight(
+        attested=registry.is_attested(h),
+        active_permitted=registry.active_testing_permitted(h),
+        allowlist_hosts=allow,
+        offscope_allowlist_hosts=offscope,
+        proxy_reachable=proxy_reachable,
+        firewall_direct_egress=firewall_direct_egress,
+        proxy_to_target=proxy_to_target,
+    )
 
 
 # ---- recon ingest ------------------------------------------------------------
