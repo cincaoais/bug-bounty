@@ -241,7 +241,7 @@ def is_host_in_scope(host: str) -> bool:
     t = active_target()
     if t is None or t["mode"] == "sandbox":
         return False
-    ok, _ = scopelib.is_in_scope(host, "", scope_rules(t["handle"]))
+    ok, _ = scopelib.is_in_scope(host, None, scope_rules(t["handle"]))
     return ok
 
 

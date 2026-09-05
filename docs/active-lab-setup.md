@@ -40,7 +40,7 @@ anything off-box. Adjust for iptables if you prefer; the property is what matter
 
 | Argument | Probe (run inside the VM) | Report |
 |---|---|---|
-| `proxy_reachable` | the proxy answers on its loopback port: `curl -sx http://127.0.0.1:<PORT> http://<TARGET>/ -o /dev/null -w '%{http_code}'` returns a code | `UP` (else `DOWN`) |
+| `proxy_reachable` | the proxy is listening on its loopback port (a plain TCP connect succeeds, independent of the target): `bash -c 'exec 3<>/dev/tcp/127.0.0.1/<PORT>' 2>/dev/null && echo UP || echo DOWN` | `UP` (else `DOWN`) |
 | `firewall_direct_egress` | a DIRECT request bypassing the proxy FAILS: `curl --noproxy '*' --max-time 5 http://1.1.1.1/` times out / is refused | `BLOCKED` (else `OPEN`) |
 | `proxy_to_target` | a request to the target THROUGH the proxy SUCCEEDS: `curl -x http://127.0.0.1:<PORT> --max-time 10 http://<TARGET>/ -o /dev/null -w '%{http_code}'` returns a live code | `OK` (else `FAIL`) |
 
