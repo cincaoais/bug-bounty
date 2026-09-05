@@ -56,3 +56,62 @@ def test_gate_columns_present_and_init_idempotent(tmp_path, monkeypatch):
     conn.close()
     assert {"active_testing_permitted", "active_permitted_note",
             "active_permitted_at"} <= cols
+
+
+import activelab
+
+
+def _all_good_kwargs(**over):
+    base = dict(attested=True, active_permitted=True,
+                allowlist_hosts=["api.acme.com"], offscope_allowlist_hosts=[],
+                proxy_reachable="UP", firewall_direct_egress="BLOCKED",
+                proxy_to_target="OK")
+    base.update(over)
+    return base
+
+
+def _status(result, name):
+    return {c["name"]: c["status"] for c in result["checks"]}[name]
+
+
+def test_preflight_ready_when_all_pass():
+    r = activelab.active_lab_preflight(**_all_good_kwargs())
+    assert r["ready"] is True
+    assert all(c["status"] == "pass" for c in r["checks"])
+
+
+def test_preflight_fails_without_attestation():
+    r = activelab.active_lab_preflight(**_all_good_kwargs(attested=False))
+    assert r["ready"] is False and _status(r, "legal-attestation") == "fail"
+
+
+def test_preflight_fails_without_roe_gate():
+    r = activelab.active_lab_preflight(**_all_good_kwargs(active_permitted=False))
+    assert r["ready"] is False and _status(r, "roe-gate") == "fail"
+
+
+def test_preflight_fails_on_empty_allowlist():
+    r = activelab.active_lab_preflight(**_all_good_kwargs(allowlist_hosts=[]))
+    assert r["ready"] is False and _status(r, "allowlist-in-scope") == "fail"
+
+
+def test_preflight_fails_on_offscope_allowlist_host():
+    r = activelab.active_lab_preflight(
+        **_all_good_kwargs(allowlist_hosts=["api.acme.com", "evil.example"],
+                           offscope_allowlist_hosts=["evil.example"]))
+    assert r["ready"] is False and _status(r, "allowlist-in-scope") == "fail"
+
+
+def test_preflight_fails_closed_on_missing_proxy_evidence():
+    r = activelab.active_lab_preflight(**_all_good_kwargs(proxy_reachable=""))
+    assert r["ready"] is False and _status(r, "proxy-reachable") == "fail"
+
+
+def test_preflight_fails_when_direct_egress_open():
+    r = activelab.active_lab_preflight(**_all_good_kwargs(firewall_direct_egress="OPEN"))
+    assert r["ready"] is False and _status(r, "firewall-sealed") == "fail"
+
+
+def test_preflight_fails_when_proxy_to_target_fails():
+    r = activelab.active_lab_preflight(**_all_good_kwargs(proxy_to_target="FAIL"))
+    assert r["ready"] is False and _status(r, "firewall-sealed") == "fail"
