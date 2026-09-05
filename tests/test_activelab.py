@@ -174,3 +174,20 @@ def test_set_active_permission_tool_no_target_errors():
     with tempfile.TemporaryDirectory() as tmp:
         server = _reload_server(tmp)
         assert "error" in server.set_active_permission(True)
+
+
+def test_active_lab_preflight_does_not_consume_scope_override():
+    with tempfile.TemporaryDirectory() as tmp:
+        server = _reload_server(tmp)
+        server.create_target("acme", "hackerone", "public")
+        server.set_scope_rules("acme", [{"pattern": "*.acme.com", "in_scope": True}])
+        server.legal_attest(authorization_ref="x")
+        server.set_active_permission(True)
+        server.scope_override("evil.example", "hand-verified")  # a one-time override on file
+        # an override-gated host is NOT a stable in-scope allowlist entry -> fails
+        r = server.active_lab_preflight(["evil.example"], proxy_reachable="UP",
+                                        firewall_direct_egress="BLOCKED", proxy_to_target="OK")
+        by = {c["name"]: c["status"] for c in r["checks"]}
+        assert by["allowlist-in-scope"] == "fail"
+        # and the preflight must NOT have consumed the override: a real check_scope still finds it
+        assert server.check_scope("evil.example")["in_scope"] is True

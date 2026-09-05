@@ -233,6 +233,18 @@ def check_scope(host: str, path: str | None = None, port: int | None = None) -> 
     return scopelib.is_in_scope(host, path, scope_rules(t["handle"]))
 
 
+def is_host_in_scope(host: str) -> bool:
+    """Non-consuming, rules-only scope check for the ACTIVE target. Unlike
+    check_scope it does NOT consume a one-time override — safe for a dry-run
+    verify (active_lab_preflight). An override-gated host reads as NOT in scope,
+    which is correct: a burnable override is not a stable allow-list entry."""
+    t = active_target()
+    if t is None or t["mode"] == "sandbox":
+        return False
+    ok, _ = scopelib.is_in_scope(host, "", scope_rules(t["handle"]))
+    return ok
+
+
 def scope_status(handle: str | None = None) -> dict:
     t = active_target() if handle is None else {"handle": handle}
     if t is None:

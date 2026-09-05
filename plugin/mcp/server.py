@@ -165,7 +165,7 @@ def active_lab_preflight(allowlist_hosts: list[str], proxy_reachable: str = "",
                 "checks": [{"name": "active-target", "status": "fail", "detail": "no active target"}]}
     h = target["handle"]
     allow = list(allowlist_hosts or [])
-    offscope = [x for x in allow if not registry.check_scope(x, "")[0]]
+    offscope = [x for x in allow if not registry.is_host_in_scope(x)]
     return activelab.active_lab_preflight(
         attested=registry.is_attested(h),
         active_permitted=registry.active_testing_permitted(h),
