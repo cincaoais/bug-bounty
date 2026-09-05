@@ -420,6 +420,56 @@ def is_attested(handle: str) -> bool:
     return get_attestation(handle).get("attested", False)
 
 
+# ---- active-lab ROE gate (standing per-target permission) ---------------------
+#
+# Whether the PROGRAM's published ROE permits active/automated testing. Distinct
+# from the legal attestation above (that is the tester's posture). Default: NOT
+# permitted — recorded once, deliberately. Stored on the target row (guarded
+# ALTER columns added in db.init_registry, v4). Grants no traffic by itself.
+
+def set_active_permission(handle: str, permitted: bool, note: str = "",
+                          permitted_at: str | None = None) -> dict:
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        row = conn.execute("SELECT id FROM target WHERE handle=?", (handle,)).fetchone()
+        if row is None:
+            raise ValueError(f"no such target: {handle}")
+        conn.execute(
+            "UPDATE target SET active_testing_permitted=?, active_permitted_note=?, "
+            "active_permitted_at=? WHERE handle=?",
+            (1 if permitted else 0, note, permitted_at or _now(), handle),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return get_active_permission(handle)
+
+
+def get_active_permission(handle: str) -> dict:
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        r = conn.execute(
+            "SELECT handle, active_testing_permitted, active_permitted_note, "
+            "active_permitted_at FROM target WHERE handle=?", (handle,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if r is None:
+        return {"handle": handle, "active_testing_permitted": False, "note": "", "at": ""}
+    return {
+        "handle": r["handle"],
+        "active_testing_permitted": bool(r["active_testing_permitted"]),
+        "note": r["active_permitted_note"] or "",
+        "at": r["active_permitted_at"] or "",
+    }
+
+
+def active_testing_permitted(handle: str) -> bool:
+    return get_active_permission(handle).get("active_testing_permitted", False)
+
+
 if __name__ == "__main__":
     import os, tempfile
     os.environ["BB_DATA_DIR"] = tempfile.mkdtemp()

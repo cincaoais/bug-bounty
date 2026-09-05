@@ -16,7 +16,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA_REGISTRY = """
 CREATE TABLE IF NOT EXISTS target (
@@ -211,6 +211,12 @@ def init_registry() -> None:
         _add_column_if_missing(conn, "target", "cssp_licensed INTEGER NOT NULL DEFAULT 0")
         _add_column_if_missing(conn, "target", "authorization_ref TEXT NOT NULL DEFAULT ''")
         _add_column_if_missing(conn, "target", "attested_at TEXT NOT NULL DEFAULT ''")
+        # Active-lab ROE gate (v4): whether the PROGRAM's published policy permits
+        # active/automated testing — distinct from the tester's legal attestation
+        # above. Default 0 = NOT permitted (fail-closed). Same guarded-ALTER pattern.
+        _add_column_if_missing(conn, "target", "active_testing_permitted INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_missing(conn, "target", "active_permitted_note TEXT NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "target", "active_permitted_at TEXT NOT NULL DEFAULT ''")
         conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         conn.commit()
     finally:
