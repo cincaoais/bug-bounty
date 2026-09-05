@@ -135,3 +135,20 @@ Tell the user, before hunting starts:
 - Never auto-run traffic against a real program whose rules you have not verified as permitting it.
 - Never mark a finding confirmed or run reporting without the user's explicit approval.
 - Never put real production credentials/session tokens into scope or notes; if the user provides test creds, record them with the confidentiality they carry and redact anything sensitive.
+
+## Step — record active-testing permission (ROE gate)
+
+After scope and legal posture, record whether the PROGRAM's published ROE permits
+active/automated testing — a fact distinct from your own legal posture. You already
+extracted the automation/rate-limit policy in Step 2; turn it into the gate:
+
+- If the policy explicitly permits active/automated testing, call
+  `set_active_permission(permitted=true, note="<quote the policy + any rate ceiling>")`.
+- If it forbids it, is silent, or you could not verify it, call
+  `set_active_permission(permitted=false, note="<what the policy says, or 'unverified'>")`.
+  The default is NOT permitted, and staying there is correct whenever you are unsure.
+
+This is bookkeeping for a future, opt-in active-lab mode; it grants no traffic now, and
+`active_lab_preflight` will only read `ready` after the containment posture is verified.
+Never set `permitted=true` from the user's say-so alone — it must trace to the published
+policy, the same iron rule as scope.
