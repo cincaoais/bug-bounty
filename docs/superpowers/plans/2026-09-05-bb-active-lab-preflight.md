@@ -38,6 +38,7 @@
 **Files:**
 - Modify: `plugin/mcp/db.py`
 - Modify: `plugin/mcp/registry.py`
+- Modify: `tests/test_legal_state.py` (the schema-version assertion — the v4 bump is owned here)
 - Test: `tests/test_activelab.py`
 
 **Interfaces:**
@@ -190,15 +191,25 @@ def active_testing_permitted(handle: str) -> bool:
     return get_active_permission(handle).get("active_testing_permitted", False)
 ```
 
+- [ ] **Step 3c: Update the schema-version assertion in `tests/test_legal_state.py`**
+
+`test_schema_is_v3_with_legal_tables_and_columns` pins the old version. The v4 bump is owned by this task, so update it (in `tests/test_legal_state.py`, the `test_schema_is_v3_with_legal_tables_and_columns` function):
+
+```python
+            assert ver == 4
+```
+
+(replacing `assert ver == 3`). Optionally rename the test to `test_schema_is_v4_...` for clarity; the assertion value is the load-bearing change. Leave the rest of that test — the `legal_override` table and attestation-column assertions still hold.
+
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `python -m pytest tests/test_activelab.py -q`
-Expected: PASS (6 passed).
+Run: `python -m pytest tests/test_activelab.py tests/test_legal_state.py -q`
+Expected: PASS (the 6 new gate tests + `test_legal_state.py` green on v4).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add plugin/mcp/db.py plugin/mcp/registry.py tests/test_activelab.py
+git add plugin/mcp/db.py plugin/mcp/registry.py tests/test_legal_state.py tests/test_activelab.py
 git commit -m "feat(activelab): per-program ROE active-testing gate (schema v4, fail-closed)"
 ```
 
@@ -648,4 +659,4 @@ git commit -m "chore(activelab): milestone-2 verification green (pytest + node),
 
 **3. Type consistency:** `set_active_permission(handle, permitted, note, permitted_at)` / `get_active_permission -> {handle, active_testing_permitted, note, at}` / `active_testing_permitted(handle)->bool` are identical across Tasks 1 and 3; `activelab.active_lab_preflight(attested, active_permitted, allowlist_hosts, offscope_allowlist_hosts, proxy_reachable, firewall_direct_egress, proxy_to_target)->{ready,checks}` is identical in Tasks 2 and 3; the five check names (`legal-attestation`, `roe-gate`, `allowlist-in-scope`, `proxy-reachable`, `firewall-sealed`) match across the checker, its tests, and the tool tests. ✓
 
-**Executor note:** if any existing test asserts `PRAGMA user_version == 3` or `db.SCHEMA_VERSION == 3`, update it to 4 (the bump is intentional and part of Task 1). A quick `grep -rn "user_version\|SCHEMA_VERSION" tests/` before starting Task 1 will surface it.
+**Executor note:** the only test coupled to the schema version is `tests/test_legal_state.py::test_schema_is_v3_with_legal_tables_and_columns` (asserts `ver == 3`); Task 1 Step 3c updates it to `== 4`. No other test or non-`db.py` source references `user_version`/`SCHEMA_VERSION` (verified by grep), so the bump is otherwise inert.
