@@ -368,7 +368,7 @@ git commit -m "feat(activelab): pure active_lab_preflight checker, 5 fail-closed
 - Test: `tests/test_activelab.py`
 
 **Interfaces:**
-- Consumes: `registry.active_target`, `registry.is_attested`, `registry.active_testing_permitted`, `registry.set_active_permission`, `registry.check_scope`, `activelab.active_lab_preflight`.
+- Consumes: `registry.active_target`, `registry.is_attested`, `registry.active_testing_permitted`, `registry.set_active_permission`, `registry.is_host_in_scope` (non-consuming, rules-only — NOT `check_scope`, which consumes a one-time override), `activelab.active_lab_preflight`.
 - Produces (module-level callables, per the `@mcp.tool()` pattern): `server.set_active_permission(permitted: bool, note: str = "", handle: str = "") -> dict`; `server.active_lab_preflight(allowlist_hosts: list[str], proxy_reachable: str = "", firewall_direct_egress: str = "", proxy_to_target: str = "") -> dict`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -478,7 +478,7 @@ def active_lab_preflight(allowlist_hosts: list[str], proxy_reachable: str = "",
                 "checks": [{"name": "active-target", "status": "fail", "detail": "no active target"}]}
     h = target["handle"]
     allow = list(allowlist_hosts or [])
-    offscope = [x for x in allow if not registry.check_scope(x, "")[0]]
+    offscope = [x for x in allow if not registry.is_host_in_scope(x)]
     return activelab.active_lab_preflight(
         attested=registry.is_attested(h),
         active_permitted=registry.active_testing_permitted(h),

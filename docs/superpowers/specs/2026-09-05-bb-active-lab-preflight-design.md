@@ -70,7 +70,7 @@ Three components. New pure logic is isolated and unit-tested; storage follows th
 
   `ready` is the AND of all five. Any status other than the exact safe value is a `fail`.
 
-- **MCP tool** `active_lab_preflight(allowlist_hosts, proxy_reachable, firewall_direct_egress, proxy_to_target)` (`plugin/mcp/server.py`, analog of `sandbox_preflight`): resolves the active target (none → not ready, fail-closed), reads `attested = registry.is_attested(handle)` and `active_permitted = registry.active_testing_permitted(handle)`, computes `offscope_allowlist_hosts = [h for h in allowlist_hosts if not registry.check_scope(h, "")[0]]`, then returns `activelab.active_lab_preflight(...)`.
+- **MCP tool** `active_lab_preflight(allowlist_hosts, proxy_reachable, firewall_direct_egress, proxy_to_target)` (`plugin/mcp/server.py`, analog of `sandbox_preflight`): resolves the active target (none → not ready, fail-closed), reads `attested = registry.is_attested(handle)` and `active_permitted = registry.active_testing_permitted(handle)`, computes `offscope_allowlist_hosts = [h for h in allowlist_hosts if not registry.is_host_in_scope(h)]`, then returns `activelab.active_lab_preflight(...)`. **`is_host_in_scope` is a non-consuming, rules-only scope check** (added to `registry.py`): unlike `check_scope`, it must NOT consume a one-time scope override — a dry-run verify has to be idempotent, and a host reachable only via a burnable override is correctly *not* a stable in-scope allowlist entry.
 
 ### 4.3 The firewall backstop (docs + probe contract)
 
