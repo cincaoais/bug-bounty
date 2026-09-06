@@ -482,6 +482,77 @@ def active_testing_permitted(handle: str) -> bool:
     return get_active_permission(handle).get("active_testing_permitted", False)
 
 
+# ---- active-lab state (M3, INERT — scope-guard does not read these) -----------
+
+def _set_active_lab_fields(handle: str, fields: dict) -> None:
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        row = conn.execute("SELECT id FROM target WHERE handle=?", (handle,)).fetchone()
+        if row is None:
+            raise ValueError(f"no such target: {handle}")
+        assigns = ", ".join(f"{k}=?" for k in fields)   # keys are hardcoded column names
+        conn.execute(f"UPDATE target SET {assigns} WHERE handle=?", (*fields.values(), handle))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def active_lab_engage(handle: str, rate_per_min: int) -> dict:
+    _set_active_lab_fields(handle, {
+        "active_lab_engaged": 1, "active_lab_paused": 0, "active_lab_ready": 0,
+        "active_lab_pause_reason": "", "active_lab_rate_per_min": int(rate_per_min),
+        "active_lab_engaged_at": _now(),
+    })
+    return get_active_lab(handle)
+
+
+def active_lab_disengage(handle: str) -> dict:
+    _set_active_lab_fields(handle, {"active_lab_engaged": 0})
+    return get_active_lab(handle)
+
+
+def active_lab_pause(handle: str, reason: str = "") -> dict:
+    _set_active_lab_fields(handle, {"active_lab_paused": 1, "active_lab_pause_reason": reason})
+    return get_active_lab(handle)
+
+
+def active_lab_resume(handle: str) -> dict:
+    _set_active_lab_fields(handle, {"active_lab_paused": 0, "active_lab_ready": 0,
+                                    "active_lab_pause_reason": ""})
+    return get_active_lab(handle)
+
+
+def set_active_lab_ready(handle: str, ready: bool) -> dict:
+    _set_active_lab_fields(handle, {"active_lab_ready": 1 if ready else 0})
+    return get_active_lab(handle)
+
+
+def get_active_lab(handle: str) -> dict:
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        r = conn.execute(
+            "SELECT handle, active_lab_engaged, active_lab_paused, active_lab_pause_reason, "
+            "active_lab_ready, active_lab_rate_per_min, active_lab_engaged_at "
+            "FROM target WHERE handle=?", (handle,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if r is None:
+        return {"handle": handle, "engaged": False, "paused": False, "pause_reason": "",
+                "ready": False, "rate_per_min": 0, "engaged_at": ""}
+    return {
+        "handle": r["handle"],
+        "engaged": bool(r["active_lab_engaged"]),
+        "paused": bool(r["active_lab_paused"]),
+        "pause_reason": r["active_lab_pause_reason"] or "",
+        "ready": bool(r["active_lab_ready"]),
+        "rate_per_min": int(r["active_lab_rate_per_min"] or 0),
+        "engaged_at": r["active_lab_engaged_at"] or "",
+    }
+
+
 if __name__ == "__main__":
     import os, tempfile
     os.environ["BB_DATA_DIR"] = tempfile.mkdtemp()

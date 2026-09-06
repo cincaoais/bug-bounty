@@ -16,7 +16,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA_REGISTRY = """
 CREATE TABLE IF NOT EXISTS target (
@@ -47,6 +47,11 @@ CREATE TABLE IF NOT EXISTS legal_override (
   created_at TEXT NOT NULL,
   used INTEGER NOT NULL DEFAULT 0,
   used_at TEXT
+);
+CREATE TABLE IF NOT EXISTS active_lab_rate (
+  handle TEXT NOT NULL, host TEXT NOT NULL,
+  tokens REAL NOT NULL, last_ts TEXT NOT NULL,
+  PRIMARY KEY (handle, host)
 );
 """
 
@@ -217,6 +222,14 @@ def init_registry() -> None:
         _add_column_if_missing(conn, "target", "active_testing_permitted INTEGER NOT NULL DEFAULT 0")
         _add_column_if_missing(conn, "target", "active_permitted_note TEXT NOT NULL DEFAULT ''")
         _add_column_if_missing(conn, "target", "active_permitted_at TEXT NOT NULL DEFAULT ''")
+        # Active-lab state (v5): per-target engagement/pause/ready + rate ceiling.
+        # All fail-closed. INERT — scope-guard does NOT read these (deferred hook edit).
+        _add_column_if_missing(conn, "target", "active_lab_engaged INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_missing(conn, "target", "active_lab_paused INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_missing(conn, "target", "active_lab_pause_reason TEXT NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "target", "active_lab_ready INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_missing(conn, "target", "active_lab_rate_per_min INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_missing(conn, "target", "active_lab_engaged_at TEXT NOT NULL DEFAULT ''")
         conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
         conn.commit()
     finally:

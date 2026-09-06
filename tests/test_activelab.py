@@ -191,3 +191,57 @@ def test_active_lab_preflight_does_not_consume_scope_override():
         assert by["allowlist-in-scope"] == "fail"
         # and the preflight must NOT have consumed the override: a real check_scope still finds it
         assert server.check_scope("evil.example")["in_scope"] is True
+
+
+def test_active_lab_state_defaults(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    registry.create_target("acme", "hackerone", "public")
+    st = registry.get_active_lab("acme")
+    assert st == {"handle": "acme", "engaged": False, "paused": False, "pause_reason": "",
+                  "ready": False, "rate_per_min": 0, "engaged_at": ""}
+
+
+def test_active_lab_engage_sets_rate_and_clears_flags(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    registry.create_target("acme", "hackerone", "public")
+    registry.set_active_lab_ready("acme", True)
+    st = registry.active_lab_engage("acme", 30)
+    assert st["engaged"] is True and st["rate_per_min"] == 30
+    assert st["paused"] is False and st["ready"] is False and st["engaged_at"]
+
+
+def test_active_lab_pause_resume(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    registry.create_target("acme", "hackerone", "public")
+    registry.active_lab_engage("acme", 10)
+    registry.set_active_lab_ready("acme", True)
+    p = registry.active_lab_pause("acme", "5xx spike")
+    assert p["paused"] is True and p["pause_reason"] == "5xx spike"
+    r = registry.active_lab_resume("acme")
+    assert r["paused"] is False and r["ready"] is False and r["pause_reason"] == ""
+
+
+def test_active_lab_disengage(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    registry.create_target("acme", "hackerone", "public")
+    registry.active_lab_engage("acme", 10)
+    assert registry.active_lab_disengage("acme")["engaged"] is False
+
+
+def test_active_lab_accessors_unknown_target_raise(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    import pytest as _pt
+    with _pt.raises(ValueError):
+        registry.active_lab_engage("nope", 10)
+
+
+def test_active_lab_columns_and_rate_table_present(tmp_path, monkeypatch):
+    db, _ = _fresh(tmp_path, monkeypatch)
+    db.init_registry(); db.init_registry()  # idempotent
+    conn = db.connect(db.registry_path())
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(target)")}
+    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    conn.close()
+    assert {"active_lab_engaged", "active_lab_paused", "active_lab_pause_reason",
+            "active_lab_ready", "active_lab_rate_per_min", "active_lab_engaged_at"} <= cols
+    assert "active_lab_rate" in tables

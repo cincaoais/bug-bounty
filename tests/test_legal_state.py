@@ -25,7 +25,7 @@ def test_schema_is_v4_with_legal_tables_and_columns():
         conn = db.connect(db.registry_path())
         try:
             ver = conn.execute("PRAGMA user_version").fetchone()[0]
-            assert ver == 4
+            assert ver == 5
             tables = {r[0] for r in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
             assert "legal_override" in tables
