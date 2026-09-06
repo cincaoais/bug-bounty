@@ -47,3 +47,14 @@ def active_lab_preflight(
                      f"proxy->target: {proxy_to_target or 'none'})")),
     ]
     return {"ready": all(c["status"] == "pass" for c in checks), "checks": checks}
+
+
+def rate_step(tokens, elapsed_sec, capacity, refill_per_sec):
+    """Token-bucket step: refill by elapsed, then try to consume 1 token.
+    Returns (allowed: bool, new_tokens: float, retry_after: float). Pure — no clock, no I/O."""
+    tokens = min(float(capacity), float(tokens) + float(elapsed_sec) * float(refill_per_sec))
+    if tokens >= 1.0:
+        return (True, tokens - 1.0, 0.0)
+    needed = 1.0 - tokens
+    retry = needed / refill_per_sec if refill_per_sec > 0 else float("inf")
+    return (False, tokens, retry)

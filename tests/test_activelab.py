@@ -245,3 +245,43 @@ def test_active_lab_columns_and_rate_table_present(tmp_path, monkeypatch):
     assert {"active_lab_engaged", "active_lab_paused", "active_lab_pause_reason",
             "active_lab_ready", "active_lab_rate_per_min", "active_lab_engaged_at"} <= cols
     assert "active_lab_rate" in tables
+
+
+def test_rate_step_consume_refill_and_deny():
+    import activelab
+    ok, tok, retry = activelab.rate_step(3.0, 0.0, 3.0, 0.0)
+    assert ok is True and abs(tok - 2.0) < 1e-9 and retry == 0.0
+    ok, tok, retry = activelab.rate_step(0.0, 0.0, 3.0, 0.0)
+    assert ok is False and retry == float("inf")
+    ok, tok, _ = activelab.rate_step(0.0, 60.0, 3.0, 3.0 / 60.0)  # 60s * 0.05/s = 3 tokens
+    assert ok is True and abs(tok - 2.0) < 1e-9
+
+
+def test_rate_consume_persisted_allows_then_denies_then_refills(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    registry.create_target("acme", "hackerone", "public")
+    registry.active_lab_engage("acme", 3)  # capacity 3, refill 3/60 per sec
+    t0 = "2026-09-06T00:00:00+00:00"
+    assert registry.active_lab_rate_consume("acme", "api.acme.com", now=t0)["allowed"] is True
+    assert registry.active_lab_rate_consume("acme", "api.acme.com", now=t0)["allowed"] is True
+    assert registry.active_lab_rate_consume("acme", "api.acme.com", now=t0)["allowed"] is True
+    assert registry.active_lab_rate_consume("acme", "api.acme.com", now=t0)["allowed"] is False
+    t1 = "2026-09-06T00:00:40+00:00"  # +40s -> +2 tokens
+    assert registry.active_lab_rate_consume("acme", "api.acme.com", now=t1)["allowed"] is True
+
+
+def test_rate_consume_per_host_isolated(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    registry.create_target("acme", "hackerone", "public")
+    registry.active_lab_engage("acme", 1)
+    t0 = "2026-09-06T00:00:00+00:00"
+    assert registry.active_lab_rate_consume("acme", "a.acme.com", now=t0)["allowed"] is True
+    assert registry.active_lab_rate_consume("acme", "b.acme.com", now=t0)["allowed"] is True
+    assert registry.active_lab_rate_consume("acme", "a.acme.com", now=t0)["allowed"] is False
+
+
+def test_rate_consume_fail_closed_when_no_ceiling(tmp_path, monkeypatch):
+    _, registry = _fresh(tmp_path, monkeypatch)
+    registry.create_target("acme", "hackerone", "public")  # rate_per_min defaults 0
+    out = registry.active_lab_rate_consume("acme", "api.acme.com", now="2026-09-06T00:00:00+00:00")
+    assert out["allowed"] is False and out["capacity"] == 0.0

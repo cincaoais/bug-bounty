@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import datetime as _dt
 
+import activelab
 import db
 import sandbox
 import scope as scopelib
@@ -551,6 +552,48 @@ def get_active_lab(handle: str) -> dict:
         "rate_per_min": int(r["active_lab_rate_per_min"] or 0),
         "engaged_at": r["active_lab_engaged_at"] or "",
     }
+
+
+def _elapsed_seconds(t0: str, t1: str) -> float:
+    try:
+        a = _dt.datetime.fromisoformat(t0)
+        b = _dt.datetime.fromisoformat(t1)
+        if a.tzinfo is None:
+            a = a.replace(tzinfo=_dt.timezone.utc)
+        if b.tzinfo is None:
+            b = b.replace(tzinfo=_dt.timezone.utc)
+        return (b - a).total_seconds()
+    except ValueError:
+        return 0.0
+
+
+def active_lab_rate_consume(handle: str, host: str, now: str | None = None) -> dict:
+    """Consume one per-host active-lab rate token for `handle`. INERT in M3 — nothing in the
+    hook calls this yet. Fail-closed: rate_per_min<=0 -> denied. Deterministic via `now` (ISO)."""
+    cap = float(get_active_lab(handle)["rate_per_min"])
+    ts_now = now or _now()
+    if cap <= 0:
+        return {"allowed": False, "tokens": 0.0, "retry_after": float("inf"), "capacity": 0.0}
+    refill = cap / 60.0
+    _ensure_registry()
+    conn = db.connect(db.registry_path())
+    try:
+        r = conn.execute(
+            "SELECT tokens, last_ts FROM active_lab_rate WHERE handle=? AND host=?",
+            (handle, host)
+        ).fetchone()
+        tokens, last_ts = (float(r["tokens"]), r["last_ts"]) if r is not None else (cap, ts_now)
+        elapsed = max(0.0, _elapsed_seconds(last_ts, ts_now))
+        allowed, new_tokens, retry = activelab.rate_step(tokens, elapsed, cap, refill)
+        conn.execute(
+            "INSERT INTO active_lab_rate (handle, host, tokens, last_ts) VALUES (?,?,?,?) "
+            "ON CONFLICT(handle, host) DO UPDATE SET tokens=excluded.tokens, last_ts=excluded.last_ts",
+            (handle, host, new_tokens, ts_now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return {"allowed": allowed, "tokens": new_tokens, "retry_after": retry, "capacity": cap}
 
 
 if __name__ == "__main__":
