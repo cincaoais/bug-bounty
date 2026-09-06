@@ -96,3 +96,8 @@ Nothing here reaches `scope-guard.py`. The state is inert; the rate consume is e
 ## 9. Milestone boundary / what comes next (separately authorized)
 
 The deferred hook edit: a `scope-guard.py` active-lab branch that, when `active_lab_engaged`, denies active traffic unless `active_lab_ready` and not `active_lab_paused`, consumes an `active_lab_rate_consume` token per in-scope active call (deny + auto-pause on breach) — a **strict superset of bounty denials**, proven by a "never more permissive than bounty" property test. This spec deliberately does not build it.
+
+**Two carry-forward notes for that future edit (surfaced by the M3 whole-branch review):**
+
+1. `active_lab_rate_consume` gates on `rate_per_min > 0` *only* — it is independent of `engaged`, and `disengage()` leaves `rate_per_min` set. That is harmless while inert (no caller), but the hook branch must itself gate on `engaged AND ready AND NOT paused` *before* consuming a token; do not treat a passing `rate_consume` as sufficient authorization.
+2. `active_lab_rate_consume`'s token read-modify-write (SELECT then upsert on one connection) is not atomic under concurrency. Single-user and inert today; the enforcement edit should wrap the consume in a transaction or lock if concurrent tool calls become possible.

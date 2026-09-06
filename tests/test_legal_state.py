@@ -18,7 +18,7 @@ def _fresh(tmp):
     importlib.reload(registry)
 
 
-def test_schema_is_v4_with_legal_tables_and_columns():
+def test_schema_is_v5_with_legal_tables_and_columns():
     with tempfile.TemporaryDirectory() as tmp:
         _fresh(tmp)
         db.init_registry()
