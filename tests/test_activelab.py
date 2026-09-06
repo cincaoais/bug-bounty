@@ -285,3 +285,49 @@ def test_rate_consume_fail_closed_when_no_ceiling(tmp_path, monkeypatch):
     registry.create_target("acme", "hackerone", "public")  # rate_per_min defaults 0
     out = registry.active_lab_rate_consume("acme", "api.acme.com", now="2026-09-06T00:00:00+00:00")
     assert out["allowed"] is False and out["capacity"] == 0.0
+
+
+def test_active_lab_engage_tool_requires_positive_rate():
+    with tempfile.TemporaryDirectory() as tmp:
+        server = _reload_server(tmp)
+        server.create_target("acme", "hackerone", "public")
+        assert "error" in server.active_lab_engage(0)
+        assert server.active_lab_engage(20)["engaged"] is True
+
+
+def test_active_lab_tools_pause_resume_status():
+    with tempfile.TemporaryDirectory() as tmp:
+        server = _reload_server(tmp)
+        server.create_target("acme", "hackerone", "public")
+        server.active_lab_engage(10)
+        assert server.active_lab_pause("waf")["paused"] is True
+        r = server.active_lab_resume()
+        assert r["paused"] is False and r["ready"] is False
+        assert server.active_lab_status()["engaged"] is True
+        assert server.active_lab_disengage()["engaged"] is False
+
+
+def test_active_lab_preflight_stores_ready_when_engaged():
+    with tempfile.TemporaryDirectory() as tmp:
+        server = _reload_server(tmp)
+        server.create_target("acme", "hackerone", "public")
+        server.set_scope_rules("acme", [{"pattern": "*.acme.com", "in_scope": True}])
+        server.legal_attest(authorization_ref="x")
+        server.set_active_permission(True)
+        server.active_lab_engage(10)
+        r = server.active_lab_preflight(["api.acme.com"], proxy_reachable="UP",
+                                        firewall_direct_egress="BLOCKED", proxy_to_target="OK")
+        assert r["ready"] is True
+        assert server.active_lab_status()["ready"] is True  # stored
+
+
+def test_active_lab_preflight_does_not_store_when_not_engaged():
+    with tempfile.TemporaryDirectory() as tmp:
+        server = _reload_server(tmp)
+        server.create_target("acme", "hackerone", "public")
+        server.set_scope_rules("acme", [{"pattern": "*.acme.com", "in_scope": True}])
+        server.legal_attest(authorization_ref="x")
+        server.set_active_permission(True)
+        server.active_lab_preflight(["api.acme.com"], proxy_reachable="UP",
+                                    firewall_direct_egress="BLOCKED", proxy_to_target="OK")
+        assert server.active_lab_status()["ready"] is False  # not engaged -> not stored

@@ -150,6 +150,58 @@ def set_active_permission(permitted: bool, note: str = "", handle: str = "") -> 
 
 
 @mcp.tool()
+def active_lab_engage(rate_per_min: int) -> dict:
+    """Engage active-lab BOOKKEEPING for the active target (engaged=1, ready=0, paused=0,
+    per-host rate ceiling = rate_per_min req/min). This grants NO traffic — the scope-guard
+    hook does not read active-lab state (enforcement is a future, separately-authorized
+    milestone). rate_per_min must be > 0 (fail-closed)."""
+    if rate_per_min is None or rate_per_min <= 0:
+        return {"error": "rate_per_min must be > 0 (the per-host rate ceiling)"}
+    target = registry.active_target()
+    if target is None:
+        return {"error": "no active target; create/switch to one first"}
+    return registry.active_lab_engage(target["handle"], rate_per_min)
+
+
+@mcp.tool()
+def active_lab_disengage() -> dict:
+    """Disengage active-lab bookkeeping for the active target."""
+    target = registry.active_target()
+    if target is None:
+        return {"error": "no active target"}
+    return registry.active_lab_disengage(target["handle"])
+
+
+@mcp.tool()
+def active_lab_pause(reason: str = "") -> dict:
+    """Mark the active target's active-lab state paused, recording an anomaly reason. Inert
+    bookkeeping in this milestone (no hook reads it)."""
+    target = registry.active_target()
+    if target is None:
+        return {"error": "no active target"}
+    return registry.active_lab_pause(target["handle"], reason)
+
+
+@mcp.tool()
+def active_lab_resume() -> dict:
+    """Clear the active target's active-lab pause AND reset ready to 0 — a resumed target must
+    re-run active_lab_preflight before it could ever be trusted. Inert bookkeeping here."""
+    target = registry.active_target()
+    if target is None:
+        return {"error": "no active target"}
+    return registry.active_lab_resume(target["handle"])
+
+
+@mcp.tool()
+def active_lab_status() -> dict:
+    """Report the active target's active-lab state (engaged/paused/ready/rate/engaged_at)."""
+    target = registry.active_target()
+    if target is None:
+        return {"error": "no active target"}
+    return registry.get_active_lab(target["handle"])
+
+
+@mcp.tool()
 def active_lab_preflight(allowlist_hosts: list[str], proxy_reachable: str = "",
                          firewall_direct_egress: str = "", proxy_to_target: str = "") -> dict:
     """Verify the active-lab containment posture for the ACTIVE target -> {ready, checks}.
@@ -166,7 +218,7 @@ def active_lab_preflight(allowlist_hosts: list[str], proxy_reachable: str = "",
     h = target["handle"]
     allow = list(allowlist_hosts or [])
     offscope = [x for x in allow if not registry.is_host_in_scope(x)]
-    return activelab.active_lab_preflight(
+    result = activelab.active_lab_preflight(
         attested=registry.is_attested(h),
         active_permitted=registry.active_testing_permitted(h),
         allowlist_hosts=allow,
@@ -175,6 +227,9 @@ def active_lab_preflight(allowlist_hosts: list[str], proxy_reachable: str = "",
         firewall_direct_egress=firewall_direct_egress,
         proxy_to_target=proxy_to_target,
     )
+    if registry.get_active_lab(h)["engaged"]:
+        registry.set_active_lab_ready(h, bool(result.get("ready")))
+    return result
 
 
 # ---- recon ingest ------------------------------------------------------------
