@@ -57,3 +57,25 @@ active_lab_preflight(allowlist_hosts=["<TARGET>"], proxy_reachable="UP",
 `ready: true` means all five checks hold: legal attestation present, ROE gate = yes, the
 allowlist is entirely in scope and non-empty, the proxy is up, and the firewall is sealed.
 Any missing or unsafe evidence fails closed.
+
+## Active-lab state & rate mechanism (bookkeeping — enforcement deferred)
+
+These tools record an active-lab **posture** and a per-host **rate mechanism**. They are
+**inert**: the scope-guard hook does NOT read this state, so nothing here grants or throttles
+real traffic yet. Wiring the hook to enforce it (deny active traffic unless engaged + ready +
+not-paused + rate-ok, as a strict superset of bounty-mode denials) is a separate,
+explicitly-authorized milestone.
+
+| Tool | Effect (bookkeeping only) |
+|---|---|
+| `active_lab_engage(rate_per_min)` | engaged=1, ready=0, paused=0, sets the per-host req/min ceiling (must be > 0) |
+| `active_lab_preflight(...)` | when engaged, stores its `ready` verdict onto the target |
+| `active_lab_pause(reason)` | paused=1 — record an anomaly (target 5xx, lockout, WAF) |
+| `active_lab_resume()` | paused=0 AND ready=0 — a resumed target must re-run preflight |
+| `active_lab_disengage()` | engaged=0 |
+| `active_lab_status()` | engaged / paused / ready / rate / engaged_at |
+
+The rate mechanism (`registry.active_lab_rate_consume`) is a ledger-backed per-host token
+bucket: capacity = `rate_per_min`, refilling at `rate_per_min / 60` tokens per second, and it
+fails closed (denies) when no ceiling is set. It is built and tested now so the future hook
+edit only has to *call* it — it is not called by any live decision path in this milestone.
